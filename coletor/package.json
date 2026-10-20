@@ -1,0 +1,10 @@
+{
+  "name": "painel-agro-coletor",
+  "private": true,
+  "type": "module",
+  "description": "Busca as cotações nas fontes públicas e gera o data.json do painel.",
+  "scripts": { "coletar": "node coletar.mjs --out ../data.json" },
+  "dependencies": {
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  }
+}

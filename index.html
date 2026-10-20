@@ -1,0 +1,1360 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mercado Agrícola</title>
+<meta name="theme-color" content="#111214">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap">
+<style>
+  :root {
+    /* Grafite neutro + verde esmeralda. Dourado (sol) só no tempo; verde claro/vermelho para alta/baixa; azul para chuva. */
+    --bg: #111214;
+    --card: #1a1b1e;
+    --card-2: #232428;
+    --line: #2e2f33;
+    --text: #f5f3ee;
+    --text-2: #c8c4bc;
+    --muted: #8f8b84;
+    --accent: #34b37a;
+    --accent-soft: rgba(52, 179, 122, .15);
+    --sun: #e8b04b;
+    --up: #4ade80;
+    --down: #f87171;
+    --flat: #a8a49c;
+    --warn: #fb923c;
+    --rain: #60a5fa;
+    --rain-2: #93c5fd;
+    --num: "Barlow Semi Condensed", "Barlow", Roboto, "Segoe UI", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
+  body {
+    color: var(--text);
+    font-family: "Barlow", Roboto, "Segoe UI", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    cursor: none;
+  }
+  .num { font-variant-numeric: tabular-nums lining-nums; }
+  .valor, .relogio, .agora .t, .dia .mx, .cm-t, .total .v, .mapa-hora b { font-family: var(--num); }
+
+  /* Palco fixo de 1920×1080, escalado para caber em qualquer tela */
+  #palco {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    padding: 20px 26px 18px;
+    transform-origin: 0 0;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+
+  /* ---------- topo ---------- */
+  header { height: 92px; flex-shrink: 0; display: flex; align-items: center; gap: 24px; padding: 0 6px; }
+  .marca { display: flex; align-items: center; gap: 18px; width: 500px; }
+  .marca svg { width: 62px; height: 62px; color: var(--accent); }
+  .marca h1 { font-size: 40px; font-weight: 700; line-height: 1; }
+  .marca p { font-size: 23px; color: var(--text-2); margin-top: 6px; }
+  .centro { flex: 1; text-align: center; }
+  .saudacao { font-size: 42px; font-weight: 700; line-height: 1.1; }
+  .saudacao span { color: var(--accent); }
+  .data { font-size: 27px; color: var(--text-2); margin-top: 4px; }
+  .data::first-letter { text-transform: uppercase; }
+  .hora { width: 660px; display: flex; align-items: center; justify-content: flex-end; gap: 26px; }
+  .hora .rb { text-align: right; }
+  .clima-mini { display: flex; align-items: center; gap: 12px; padding-right: 26px; border-right: 1px solid var(--line); }
+  .clima-mini svg { width: 58px; height: 58px; color: var(--sun); flex-shrink: 0; }
+  .cm-t { font-size: 46px; font-weight: 700; line-height: 1; }
+  .cm-l { font-size: 19px; color: var(--text-2); margin-top: 4px; white-space: nowrap; max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
+  .cm-l.alerta { color: var(--warn); font-weight: 700; }
+  .hora .relogio { font-size: 72px; font-weight: 700; line-height: .95; }
+  .sinc { font-size: 20px; color: var(--muted); margin-top: 4px; white-space: nowrap; }
+  .sinc .ponto { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--up); margin-right: 8px; vertical-align: 1px; }
+  .sinc.alerta { color: var(--warn); }
+  .sinc.alerta .ponto { background: var(--warn); }
+
+  /* ---------- slides ---------- */
+  #slides { flex: 1; position: relative; min-height: 0; }
+  .slide {
+    position: absolute; left: 0; top: 0; right: 0; bottom: 0;
+    display: grid; gap: 18px;
+    opacity: 0; visibility: hidden;
+    transition: opacity .5s ease, visibility .5s;
+  }
+  .slide.ativo { opacity: 1; visibility: visible; }
+
+  #s-soja { grid-template-columns: 1.55fr 1fr 1fr; grid-template-rows: 1fr 1fr; }
+  #s-soja .grande { grid-row: span 2; }
+  #s-dolar { grid-template-columns: 1.3fr 1fr; grid-template-rows: repeat(3, 1fr); }
+  #s-dolar .grande { grid-row: span 3; }
+  #s-insumos { grid-template-columns: repeat(4, 1fr); }
+  #s-tempo-hoje { grid-template-columns: 1fr 2.15fr; }
+  #s-tempo { grid-template-rows: 1.2fr 1fr; }
+  #s-nuvens { grid-template-columns: 1158px 1fr; }
+  .mapa { position: relative; width: 1100px; height: 760px; margin-top: 10px; border-radius: 14px; overflow: hidden; background: #0c0d0e; }
+  .mapa img { position: absolute; left: 0; top: 0; width: 1100px; height: 760px; visibility: hidden; }
+  .mapa img.on { visibility: visible; }
+  .mapa svg { position: absolute; left: 0; top: 0; }
+  .mapa .viz { fill: none; stroke: #fff; stroke-opacity: .45; stroke-width: 1.5; }
+  .mapa .pr { fill: none; stroke: #fff; stroke-width: 3.5; stroke-linejoin: round; }
+  .mapa .cid text { font-size: 24px; font-weight: 700; fill: #fff; stroke: #000; stroke-width: 5px; stroke-opacity: .75; paint-order: stroke; }
+  .mapa .cid circle { fill: #fff; stroke: #000; stroke-width: 2; }
+  .mapa .cid.dest circle { fill: var(--sun); }
+  .mapa .cid.dest text { font-size: 30px; fill: var(--sun); }
+  .mapa-hora { position: absolute; left: 16px; bottom: 14px; background: rgba(12, 13, 14, .85); border-radius: 12px; padding: 8px 16px; display: flex; align-items: center; gap: 14px; }
+  .mapa-hora b { font-size: 34px; }
+  .mapa-hora .pts { display: flex; gap: 6px; }
+  .mapa-hora .pts i { width: 12px; height: 12px; border-radius: 50%; background: #4a4b50; display: block; }
+  .mapa-hora .pts i.on { background: var(--sun); }
+  .mapa-vazio { position: absolute; left: 0; right: 0; top: 45%; text-align: center; font-size: 28px; color: var(--muted); }
+  .cidades { display: flex; flex-direction: column; flex: 1; margin-top: 6px; min-height: 0; }
+  .cidade { display: flex; align-items: center; flex: 1; border-top: 1px solid var(--line); gap: 10px; min-height: 0; }
+  .cidade:first-child { border-top: 0; }
+  .cidade.cab-c { flex: 0 0 34px; font-size: 18px; color: var(--muted); }
+  .cidade .nm { flex: 1; font-size: 26px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cidade.dest .nm { color: var(--accent); }
+  .cidade .dd { width: 210px; display: flex; align-items: center; gap: 8px; font-size: 24px; white-space: nowrap; }
+  .cidade .dd svg { width: 36px; height: 36px; color: var(--sun); flex-shrink: 0; }
+  .cidade .dd span { color: var(--muted); }
+  .cidade .dd em { font-style: normal; color: var(--rain); font-size: 21px; }
+  .leg-sat { font-size: 21px; color: var(--text-2); line-height: 1.4; }
+  .coluna { display: flex; flex-direction: column; gap: 18px; min-height: 0; min-width: 0; }
+  #s-noticias { grid-template-columns: 1fr; }
+
+  /* ---------- cartões ---------- */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 20px 28px 18px;
+    display: flex; flex-direction: column;
+    min-width: 0; min-height: 0; overflow: hidden;
+    position: relative;
+  }
+  .cab { display: flex; align-items: center; gap: 12px; height: 44px; flex-shrink: 0; }
+  .cab svg { width: 36px; height: 36px; color: var(--accent); flex-shrink: 0; }
+  .peq .cab h2 { font-size: 26px; }
+  .cab h2 { font-size: 28px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .peq .selo { font-size: 17px; padding: 3px 11px; }
+  .selo {
+    margin-left: auto; white-space: nowrap; flex-shrink: 0;
+    font-size: 19px; color: var(--text-2);
+    border: 1px solid var(--line); background: transparent;
+    padding: 4px 14px; border-radius: 999px;
+  }
+  .selo.vivo { color: var(--accent); border-color: rgba(52, 179, 122, .5); background: var(--accent-soft); }
+  .selo.vivo::before { content: "● "; }
+  .selo.velho { color: var(--warn); border-color: rgba(251, 146, 60, .45); }
+
+  .rot { font-size: 24px; color: var(--text-2); }
+  .valor { font-weight: 700; line-height: 1; white-space: nowrap; }
+  .valor small { font-size: .38em; font-weight: 400; color: var(--text-2); margin-left: 8px; letter-spacing: 0; }
+  .grande .valor { font-size: 136px; margin-top: 6px; }
+  .medio .valor { font-size: 96px; margin-top: 4px; }
+  .peq .valor { font-size: 64px; margin-top: 6px; }
+
+  .var { font-size: 30px; font-weight: 700; white-space: nowrap; margin-top: 8px; }
+  .grande .var { font-size: 36px; }
+  .var .per { font-weight: 400; color: var(--muted); font-size: .78em; margin-left: 6px; }
+  .var .sep { color: var(--line); margin: 0 12px; font-weight: 400; }
+  .alta { color: var(--up); }
+  .baixa { color: var(--down); }
+  .igual { color: var(--flat); }
+
+  .sub { font-size: 24px; color: var(--text-2); margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fonte { margin-top: auto; padding-top: 10px; font-size: 19px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+  .fonte.velho { color: var(--warn); }
+  .card.velho .valor { opacity: .7; }
+
+  .spark { display: block; margin-top: 14px; flex-shrink: 0; }
+  .spark .area { fill: var(--accent-soft); stroke: none; }
+  .spark .traco { fill: none; stroke: var(--accent); stroke-width: 3.5; stroke-linejoin: round; stroke-linecap: round; }
+  .spark .fim { fill: var(--accent); }
+  .spark-info { display: flex; justify-content: space-between; font-size: 19px; color: var(--muted); margin-top: 6px; white-space: nowrap; }
+
+  /* ---------- tempo ---------- */
+  .agora { display: flex; align-items: center; gap: 22px; margin-top: 14px; }
+  .agora svg { width: 132px; height: 132px; color: var(--sun); flex-shrink: 0; }
+  .agora .t { font-size: 150px; font-weight: 700; line-height: 1; }
+  .tempo-desc { font-size: 38px; font-weight: 700; margin-top: 12px; }
+  .tempo-sens { font-size: 25px; color: var(--text-2); margin-top: 4px; }
+  .tempo-lista { margin-top: 26px; display: flex; flex-direction: column; gap: 20px; }
+  .tempo-lin { font-size: 30px; color: var(--text-2); display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+  .tempo-lin svg { width: 30px; height: 30px; color: var(--muted); flex-shrink: 0; }
+  .tempo-lin b { color: var(--text); }
+  .graf { flex: 1; min-height: 0; margin-top: 8px; position: relative; }
+  .graf svg { position: absolute; left: 0; top: 0; }
+
+  .alertas { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .alerta { display: flex; align-items: center; gap: 14px; font-size: 25px; padding: 9px 16px; border-radius: 12px; background: var(--card-2); white-space: nowrap; overflow: hidden; }
+  .alerta .sev { width: 20px; height: 20px; border-radius: 5px; flex-shrink: 0; }
+  .alerta b { font-weight: 700; }
+  .alerta .q { color: var(--text-2); }
+  .alerta .o { margin-left: auto; font-size: 18px; color: var(--muted); }
+  #th-alertas.vazio-alerta { display: none; }
+
+  .pulv-resumo { font-size: 32px; font-weight: 700; margin-top: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pulv-motivo { font-size: 23px; color: var(--text-2); margin-top: 4px; white-space: nowrap; }
+  .pulv-barra { display: flex; gap: 4px; margin-top: 14px; flex: 1; min-height: 60px; max-height: 130px; }
+  .pulv-h { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .pulv-h .c { flex: 1; border-radius: 6px; }
+  .pulv-h .l { font-size: 17px; color: var(--muted); text-align: center; }
+  .pulv-h.meia .l { color: var(--text); font-weight: 700; }
+  .c.boa { background: #2f9e57; }
+  .c.atencao { background: #c98a1c; }
+  .c.ruim { background: #b8423f; }
+  .pulv-leg { display: flex; gap: 22px; font-size: 19px; color: var(--muted); margin-top: 10px; white-space: nowrap; }
+  .pulv-leg i { display: inline-block; width: 16px; height: 16px; border-radius: 4px; margin-right: 6px; vertical-align: -2px; }
+
+  .dias7 { display: flex; flex: 1; margin-top: 8px; min-height: 0; }
+  .dia { flex: 1; min-width: 0; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 18px; gap: 5px; }
+  .dia + .dia { border-left: 1px solid var(--line); }
+  .dia .n { font-size: 28px; font-weight: 700; text-transform: capitalize; }
+  .dia .d { font-size: 19px; color: var(--muted); margin-top: -4px; }
+  .dia svg { width: 66px; height: 66px; color: var(--sun); }
+  .dia .mx { font-size: 46px; font-weight: 700; line-height: 1; }
+  .dia .mn { font-size: 29px; color: var(--muted); line-height: 1; }
+  .dia .ch { font-size: 23px; color: var(--rain); font-weight: 700; }
+  .dia .mm { font-size: 20px; color: var(--rain); }
+  .dia .vt { font-size: 19px; color: var(--muted); }
+  .dia .al { font-size: 17px; font-weight: 700; color: #1a1a1a; background: var(--warn); border-radius: 999px; padding: 2px 10px; max-width: 95%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dia .al.vazio { visibility: hidden; }
+
+  .chuva-corpo { display: flex; gap: 28px; flex: 1; min-height: 0; margin-top: 8px; }
+  .totais { width: 430px; flex-shrink: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-content: center; }
+  .total { background: var(--card-2); border-radius: 14px; padding: 12px 16px; }
+  .total .r { font-size: 20px; color: var(--text-2); }
+  .total .v { font-size: 44px; font-weight: 700; line-height: 1.1; color: var(--rain); }
+  .total .v small { font-size: 22px; color: var(--text-2); font-weight: 400; margin-left: 4px; }
+  .total.fut .v { color: #93c5fd; }
+
+  /* ---------- notícias ---------- */
+  .lista { display: flex; flex-direction: column; flex: 1; margin-top: 10px; }
+  .noticia { display: flex; align-items: center; gap: 28px; flex: 1; border-top: 1px solid var(--line); min-height: 0; }
+  .noticia:first-child { border-top: 0; }
+  .noticia .quando { width: 150px; flex-shrink: 0; }
+  .noticia .h { font-size: 30px; font-weight: 700; color: var(--text-2); }
+  .noticia .f { display: inline-block; font-size: 18px; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 3px 12px; margin-top: 6px; white-space: nowrap; }
+  .noticia .tit {
+    font-size: 38px; font-weight: 600; line-height: 1.2;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .vazio { font-size: 32px; color: var(--muted); margin: auto; }
+
+  /* ---------- rodapé ---------- */
+  footer { height: 48px; flex-shrink: 0; display: flex; align-items: center; gap: 24px; padding: 0 6px; }
+  .abas { display: flex; gap: 8px; }
+  .aba {
+    position: relative; overflow: hidden;
+    font-size: 18px; color: var(--muted);
+    padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .aba.ativa { color: var(--text); border-color: rgba(52, 179, 122, .6); background: var(--card-2); }
+  .aba .prog {
+    position: absolute; left: 0; bottom: 0; height: 4px; width: 100%;
+    background: var(--accent); transform-origin: 0 50%; transform: scaleX(0);
+  }
+  .faixa { margin-left: auto; display: flex; gap: 24px; font-size: 21px; color: var(--text-2); white-space: nowrap; }
+  .faixa b { color: var(--text); font-weight: 700; }
+</style>
+</head>
+<body>
+<div id="palco">
+  <header>
+    <div class="marca">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21c0-9 5-15 15-17-1 10-6 15-13 15"/><path d="M5 21c2-5 5-8 9-10"/></svg>
+      <div>
+        <h1>Mercado Agrícola</h1>
+        <p>Maringá · Paiçandu · Paraná</p>
+      </div>
+    </div>
+    <div class="centro">
+      <div class="saudacao"><span id="saudacao">Bom dia</span><span id="nome"></span></div>
+      <div class="data" id="data">&nbsp;</div>
+    </div>
+    <div class="hora">
+      <div class="clima-mini">
+        <svg id="cm-icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></svg>
+        <div><div class="cm-t num" id="cm-temp">—</div><div class="cm-l" id="cm-linha">Maringá</div></div>
+      </div>
+      <div class="rb">
+        <div class="relogio num" id="relogio">--:--</div>
+        <div class="sinc" id="sinc"><span class="ponto"></span><span id="sinc-txt">carregando…</span></div>
+      </div>
+    </div>
+  </header>
+
+  <div id="slides">
+    <!-- 1. PREVISÃO E CHUVA -->
+    <section class="slide" id="s-tempo" data-nome="Previsão e chuva" data-seg="20">
+      <div class="card">
+        <div class="cab"><svg viewBox="0 0 24 24" data-icone="chuva"></svg><h2>Previsão · próximos 7 dias</h2><span class="selo" id="prev-selo">Open-Meteo</span></div>
+        <div class="dias7" id="tempo-dias"></div>
+      </div>
+      <div class="card">
+        <div class="cab"><svg viewBox="0 0 24 24" data-icone="gota"></svg><h2>Chuva · 30 dias atrás e 14 à frente</h2><span class="selo">passado: estimativa de modelo, não pluviômetro</span></div>
+        <div class="chuva-corpo">
+          <div class="totais">
+            <div class="total"><div class="r">Últimos 7 dias</div><div class="v num" id="ch-p7">—</div></div>
+            <div class="total"><div class="r">Últimos 30 dias</div><div class="v num" id="ch-p30">—</div></div>
+            <div class="total fut"><div class="r">Próximos 7 dias</div><div class="v num" id="ch-f7">—</div></div>
+            <div class="total fut"><div class="r">Próximos 14 dias</div><div class="v num" id="ch-f14">—</div></div>
+          </div>
+          <div class="graf" id="ch-graf"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. NUVENS -->
+    <section class="slide" id="s-nuvens" data-nome="Nuvens" data-seg="10">
+      <div class="card">
+        <div class="cab"><svg viewBox="0 0 24 24" data-icone="nublado"></svg><h2>Nuvens sobre o Paraná</h2><span class="selo" id="sat-selo">satélite GOES-East</span></div>
+        <div class="mapa" id="mapa">
+          <div class="mapa-vazio" id="mapa-vazio">carregando imagens do satélite…</div>
+          <div id="mapa-imgs"></div>
+          <svg width="1100" height="760" viewBox="0 0 1100 760"><path class="viz" d="M1225 -9L1233 -18L1236 -31L1244 -34L1250 -46L1250 -57L1235 -65L1231 -72L1215 -75L1213 -73L1198 -68L1181 -66L1183 -75L1176 -87L1166 -99L1166 -103L1162 -119L1158 -131L1151 -144L1157 -161L1169 -168L1163 -184L1164 -185L1163 -188L1152 -195L1142 -205L1144 -222L1151 -231L1151 -232L1137 -247L1115 -267L1107 -263L1095 -256L1078 -264L1066 -264L1063 -252L1059 -245L1048 -258L1034 -242L1017 -256L1015 -245L983 -245L971 -244L956 -239L945 -242L932 -240L923 -225L926 -207L923 -202L913 -207L909 -239L898 -241L891 -225L882 -219L872 -227L871 -231L865 -246L873 -267L845 -266L823 -274L804 -273L783 -271L764 -274L755 -280L746 -280L724 -281L708 -292L693 -288L686 -282L676 -274L654 -267L648 -264L632 -251L632 -249L617 -224L585 -213L575 -198L554 -177L553 -176L545 -158L547 -132L526 -117L512 -97L514 -78L500 -56L481 -46L487 -31L473 -18L451 10L441 30L432 39L405 56L365 79L347 90L343 100L352 99L356 97L368 92L387 97L390 98L414 92L421 99L434 98L437 98L455 101L470 104L474 92L476 87L490 88L491 88L509 97L510 99L515 101L534 106L546 105L561 109L571 104L587 106L591 107L603 114L608 116L632 123L635 122L642 124L657 133L661 145L682 139L691 139L698 143L721 140L723 145L742 145L752 144L763 139L774 146L793 161L795 163L796 164L809 173L821 191L820 200L825 215L822 224L825 242L828 245L831 262L824 268L834 280L836 279L841 294L861 309L859 321L873 334L873 346L873 350L873 352L864 367L865 382L879 387L886 383L890 384L920 383L934 383L962 383L971 391L967 417L963 429L969 440L988 426L1000 433L1012 427L1032 471L1057 450L1057 436L1082 412L1125 384L1172 352L1197 325L1222 310L1237 303L1266 290L1271 286L1278 289L1295 289L1302 270L1342 257L1381 262L1387 268L1403 264L1399 250L1402 238L1419 232L1448 220L1470 198L1479 205L1495 203L1474 180L1482 174L1486 149L1507 140L1508 139L1527 131L1551 131L1572 107L1564 97L1548 95L1545 98L1531 99L1506 97L1500 86L1484 70L1479 73L1462 79L1443 82L1440 83L1435 87L1420 98L1403 104L1400 100L1391 95L1378 104L1378 97L1366 104L1364 93L1357 99L1362 104L1347 116L1360 120L1352 129L1338 134L1326 131L1313 138L1294 133L1273 139L1269 127L1274 120L1255 111L1266 105L1262 97L1257 86L1244 79L1235 74L1229 64L1221 56L1226 44L1228 38L1231 39L1238 33L1221 25L1231 15L1235 13L1225 -9ZM1418 272L1426 260L1411 253L1396 281L1423 277L1418 272Z"/><path class="viz" d="M434 627L423 622L418 623L406 619L399 616L390 615L370 616L366 617L354 618L335 615L334 615L310 601L298 605L298 606L270 601L263 626L263 628L258 641L257 650L259 670L264 683L265 690L265 697L257 705L242 728L245 729L259 730L275 731L282 729L290 732L309 720L317 723L313 734L332 731L347 720L355 718L359 724L361 735L378 728L385 733L387 733L400 744L420 738L421 741L436 735L437 744L440 745L454 749L459 740L464 750L480 752L488 753L497 757L514 770L517 777L524 776L536 771L546 772L553 784L557 782L570 789L590 804L595 806L625 825L625 827L632 838L635 836L650 849L667 877L674 880L686 897L712 903L761 909L774 904L795 908L808 915L811 930L800 927L792 941L779 943L777 966L776 974L776 991L768 1006L751 1008L750 1018L764 1030L765 1029L754 1017L776 1009L784 1011L799 1021L809 1026L819 1014L837 994L856 975L868 965L882 954L927 928L942 913L948 890L958 859L960 835L964 830L966 821L974 813L994 767L988 757L973 761L963 748L962 735L965 734L977 732L975 720L964 725L964 713L959 699L957 693L960 681L954 673L951 666L954 647L956 642L963 629L977 597L967 590L963 563L951 564L914 565L912 565L875 571L858 586L848 590L841 592L841 593L825 598L813 593L789 571L779 569L771 568L744 576L733 572L720 582L692 567L684 575L674 592L673 593L646 607L634 599L622 598L605 608L598 615L595 620L591 624L602 649L600 653L579 658L576 666L562 647L519 647L491 642L473 631L434 627Z"/><path class="viz" d="M302 -540L291 -533L273 -542L251 -539L227 -551L240 -580L253 -584L261 -586L264 -642L245 -636L224 -612L217 -611L209 -592L194 -593L178 -586L151 -611L117 -605L102 -591L64 -587L63 -588L41 -602L13 -610L-0 -626L-1 -626L-53 -641L-61 -653L-90 -647L-116 -631L-154 -634L-175 -603L-190 -597L-191 -586L-209 -569L-245 -563L-254 -556L-275 -566L-287 -578L-288 -590L-296 -599L-300 -589L-290 -576L-292 -563L-271 -521L-255 -507L-269 -506L-298 -415L-290 -396L-300 -396L-348 -296L-311 -266L-353 -240L-343 -227L-340 -209L-330 -201L-332 -178L-324 -165L-311 -159L-324 -152L-311 -149L-320 -139L-307 -133L-312 -119L-310 -81L-325 -47L-314 -30L-326 -8L-318 -3L-329 26L-295 33L-276 27L-264 38L-237 48L-199 46L-171 55L-133 42L-124 27L-109 24L-103 39L-84 52L-33 53L-23 67L-17 90L-2 110L-9 132L0 173L8 185L13 204L5 219L10 239L23 251L21 279L27 287L46 289L74 289L126 267L161 281L181 300L197 290L208 272L209 263L213 247L216 239L225 213L253 202L259 191L270 169L270 152L282 137L301 126L312 119L324 115L340 104L343 100L347 90L365 79L405 56L432 39L441 30L451 10L473 -18L487 -31L481 -46L500 -56L514 -78L512 -97L526 -117L547 -132L545 -158L553 -176L554 -177L575 -198L585 -213L617 -224L632 -249L632 -251L628 -291L627 -305L642 -319L641 -336L620 -358L571 -379L558 -381L537 -384L515 -393L503 -405L484 -407L470 -422L449 -424L438 -436L426 -446L392 -443L375 -450L368 -454L362 -463L380 -480L391 -489L382 -496L344 -496L338 -527L348 -534L325 -538L302 -540Z"/><path class="pr" d="M890 384L886 383L879 387L865 382L864 367L873 352L873 350L873 346L873 334L859 321L861 309L841 294L836 279L834 280L824 268L831 262L828 245L825 242L822 224L825 215L820 200L821 191L809 173L796 164L795 163L793 161L774 146L763 139L752 144L742 145L723 145L721 140L698 143L691 139L682 139L661 145L657 133L642 124L635 122L632 123L608 116L603 114L591 107L587 106L571 104L561 109L546 105L534 106L515 101L510 99L509 97L491 88L490 88L476 87L474 92L470 104L455 101L437 98L434 98L421 99L414 92L390 98L387 97L368 92L356 97L352 99L343 100L340 104L324 115L312 119L301 126L282 137L270 152L270 169L259 191L253 202L225 213L216 239L213 247L209 263L208 272L197 290L181 300L172 312L184 342L179 349L176 372L175 381L174 386L166 398L157 434L162 450L155 458L135 491L138 510L159 520L179 505L196 509L200 500L221 509L241 524L242 535L245 554L242 562L257 572L265 591L268 595L270 601L298 606L298 605L310 601L334 615L335 615L354 618L366 617L370 616L390 615L399 616L406 619L418 623L423 622L434 627L473 631L491 642L519 647L562 647L576 666L579 658L600 653L602 649L591 624L595 620L598 615L605 608L622 598L634 599L646 607L673 593L674 592L684 575L692 567L720 582L733 572L744 576L771 568L779 569L789 571L813 593L825 598L841 593L841 592L848 590L858 586L875 571L912 565L914 565L951 564L963 563L969 546L979 527L996 509L1002 497L1016 494L1032 471L1012 427L1000 433L988 426L969 440L963 429L967 417L971 391L962 383L934 383L920 383L890 384ZM268 477L272 476L271 476L268 477ZM306 185Z"/><g id="mapa-cidades"></g></svg>
+          <div class="mapa-hora"><b class="num" id="sat-hora">--:--</b><div class="pts" id="sat-pts"></div></div>
+        </div>
+      </div>
+      <div class="coluna">
+        <div class="card" style="flex:1">
+          <div class="cab"><svg viewBox="0 0 24 24" data-icone="local"></svg><h2>Cidades do Paraná</h2><span class="selo" id="cid-selo">Open-Meteo</span></div>
+          <div class="cidades" id="cidades"></div>
+        </div>
+        <div class="card" style="flex:0 0 auto">
+          <div class="leg-sat">De dia, a imagem mostra as cores reais: <b>nuvens brancas e grossas</b> costumam trazer chuva. À noite vira infravermelho: quanto <b>mais brilhante</b> a nuvem, mais alta e fria, sinal de temporal. Animação das últimas 2 horas.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. TEMPO HOJE -->
+    <section class="slide" id="s-tempo-hoje" data-nome="Tempo hoje" data-seg="30">
+      <div class="card">
+        <div class="cab"><svg viewBox="0 0 24 24" data-icone="local"></svg><h2>Agora · Maringá</h2><span class="selo" id="tempo-selo">Open-Meteo</span></div>
+        <div class="agora"><svg id="tempo-icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></svg><div class="t num" id="tempo-temp">—</div></div>
+        <div class="tempo-desc" id="tempo-desc">&nbsp;</div>
+        <div class="tempo-sens num" id="tempo-sens">&nbsp;</div>
+        <div class="tempo-lista">
+          <div class="tempo-lin num"><svg viewBox="0 0 24 24" data-icone="termo"></svg><span id="tempo-mx"></span></div>
+          <div class="tempo-lin num"><svg viewBox="0 0 24 24" data-icone="gota"></svg><span id="tempo-chuva"></span></div>
+          <div class="tempo-lin num"><svg viewBox="0 0 24 24" data-icone="vento"></svg><span id="tempo-vento"></span></div>
+          <div class="tempo-lin num"><svg viewBox="0 0 24 24" data-icone="umidade"></svg><span id="tempo-ar"></span></div>
+          <div class="tempo-lin num"><svg viewBox="0 0 24 24" data-icone="sol"></svg><span id="tempo-sol"></span></div>
+        </div>
+      </div>
+      <div class="coluna">
+        <div class="card vazio-alerta" id="th-alertas">
+          <div class="cab"><svg viewBox="0 0 24 24" data-icone="aviso" style="color:var(--warn)"></svg><h2>Alertas para Maringá</h2><span class="selo" id="alertas-selo">INMET</span></div>
+          <div class="alertas" id="alertas"></div>
+        </div>
+        <div class="card" style="flex:1.25">
+          <div class="cab"><svg viewBox="0 0 24 24" data-icone="relogio"></svg><h2>Próximas 24 horas</h2><span class="selo" id="h24-selo"></span></div>
+          <div class="graf" id="h24-graf"></div>
+        </div>
+        <div class="card" style="flex:1">
+          <div class="cab"><svg viewBox="0 0 24 24" data-icone="pulverizador"></svg><h2>Janela de pulverização</h2><span class="selo">indicativo · confira na lavoura</span></div>
+          <div class="pulv-resumo" id="pulv-resumo">&nbsp;</div>
+          <div class="pulv-motivo" id="pulv-motivo">&nbsp;</div>
+          <div class="pulv-barra" id="pulv-barra"></div>
+          <div class="pulv-leg"><span><i style="background:#2f9e57"></i>boa</span><span><i style="background:#c98a1c"></i>atenção</span><span><i style="background:#b8423f"></i>evitar</span><span>critério: vento 3–10 km/h · umidade acima de 55% · abaixo de 30 °C · sem chuva</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. SOJA -->
+    <section class="slide" id="s-soja" data-nome="Soja" data-seg="20">
+      <div class="card grande" data-item="soja_paranagua">
+        <div class="cab"><svg viewBox="0 0 24 24" data-icone="soja"></svg><h2>Soja · Paranaguá</h2><span class="selo"></span></div>
+        <div class="rot">Indicador CEPEA/ESALQ · porto · saca de 60 kg</div>
+        <div class="valor num">—</div>
+        <div class="var" data-mes="1"></div>
+        <svg class="spark" width="730" height="300" viewBox="0 0 730 300" data-n="30"></svg>
+        <div class="spark-info num"></div>
+        <div class="fonte"></div>
+      </div>
+      <div class="card peq" data-item="soja_parana">
+        <div class="cab"><h2>Paraná · interior</h2><span class="selo"></span></div>
+        <div class="rot">CEPEA/ESALQ · R$/saca</div>
+        <div class="valor num">—</div><div class="var"></div>
+        <svg class="spark" width="440" height="90" viewBox="0 0 440 90" data-n="30"></svg>
+        <div class="fonte"></div>
+      </div>
+      <div class="card peq" data-item="maringa_soja">
+        <div class="cab"><h2>Maringá · Paiçandu</h2><span class="selo"></span></div>
+        <div class="rot">Compra pelos atacadistas · R$/saca</div>
+        <div class="valor num">—</div><div class="var"></div>
+        <svg class="spark" width="440" height="90" viewBox="0 0 440 90" data-n="30"></svg>
+        <div class="fonte"></div>
+      </div>
+      <div class="card peq" data-item="soja_cbot">
+        <div class="cab"><h2>CBOT</h2><span class="selo"></span></div>
+        <div class="rot">Soja em Chicago · US$/bushel</div>
+        <div class="valor num">—</div><div class="var"></div>
+        <div class="sub num"></div>
+        <svg class="spark" width="440" height="70" viewBox="0 0 440 70" data-n="30"></svg>
+        <div class="fonte"></div>
+      </div>
+      <div class="card peq" data-item="soja_b3">
+        <div class="cab"><h2>B3 · soja</h2><span class="selo"></span></div>
+        <div class="rot">Contrato mais próximo · US$/saca</div>
+        <div class="valor num">—</div><div class="var"></div>
+        <div class="sub num"></div>
+        <div class="fonte"></div>
+      </div>
+    </section>
+
+    <!-- 5. DÓLAR -->
+    <section class="slide" id="s-dolar" data-nome="Dólar" data-seg="10">
+      <div class="card grande" data-item="usd">
+        <div class="cab"><svg viewBox="0 0 24 24" data-icone="dolar"></svg><h2>Dólar comercial</h2><span class="selo"></span></div>
+        <div class="rot">Venda · R$ por US$ 1</div>
+        <div class="valor num">—</div>
+        <div class="var"></div>
+        <svg class="spark" width="900" height="330" viewBox="0 0 900 330" data-n="30"></svg>
+        <div class="spark-info num"></div>
+        <div class="fonte"></div>
+      </div>
+      <div class="card peq" data-item="soja_cbot" data-conv="soja">
+        <div class="cab"><h2>Soja de Chicago em reais</h2><span class="selo"></span></div>
+        <div class="valor num">—</div>
+        <div class="sub num"></div>
+        <div class="fonte"></div>
+      </div>
+      <div class="card peq" data-item="milho_cbot" data-conv="milho">
+        <div class="cab"><h2>Milho de Chicago em reais</h2><span class="selo"></span></div>
+        <div class="valor num">—</div>
+        <div class="sub num"></div>
+        <div class="fonte"></div>
+      </div>
+      <div class="card peq" id="usd-30">
+        <div class="cab"><h2>Dólar nos últimos 30 dias</h2></div>
+        <div class="valor num">—</div>
+        <div class="sub num"></div>
+        <div class="fonte">AwesomeAPI · fechamento diário</div>
+      </div>
+    </section>
+
+    <!-- 6. INSUMOS -->
+    <section class="slide" id="s-insumos" data-nome="Insumos" data-seg="20">
+      <div class="card peq" data-item="diesel_pr">
+        <div class="cab"><svg viewBox="0 0 24 24" data-icone="diesel"></svg><h2>Diesel S10</h2><span class="selo"></span></div>
+        <div class="rot">Média do Paraná · R$/litro</div>
+        <div class="valor num">—</div><div class="var"></div>
+        <div class="sub num" data-item-sub="diesel_maringa"></div>
+        <svg class="spark" width="380" height="380" viewBox="0 0 380 380" data-n="26"></svg>
+        <div class="spark-info num"></div>
+        <div class="fonte"></div>
+      </div>
+      <div class="card peq" data-item="ureia">
+        <div class="cab"><svg viewBox="0 0 24 24" data-icone="adubo"></svg><h2>Ureia</h2><span class="selo"></span></div>
+        <div class="rot">Preço internacional · US$/t</div>
+        <div class="valor num">—</div><div class="var"></div>
+        <div class="sub num"></div>
+        <svg class="spark" width="380" height="380" viewBox="0 0 380 380" data-n="13"></svg>
+        <div class="spark-info num"></div>
+        <div class="fonte"></div>
+      </div>
+      <div class="card peq" data-item="dap">
+        <div class="cab"><svg viewBox="0 0 24 24" data-icone="adubo"></svg><h2>DAP</h2><span class="selo"></span></div>
+        <div class="rot">Fosfatado (ref. do MAP) · US$/t</div>
+        <div class="valor num">—</div><div class="var"></div>
+        <div class="sub num"></div>
+        <svg class="spark" width="380" height="380" viewBox="0 0 380 380" data-n="13"></svg>
+        <div class="spark-info num"></div>
+        <div class="fonte"></div>
+      </div>
+      <div class="card peq" data-item="kcl">
+        <div class="cab"><svg viewBox="0 0 24 24" data-icone="adubo"></svg><h2>KCl</h2><span class="selo"></span></div>
+        <div class="rot">Cloreto de potássio · US$/t</div>
+        <div class="valor num">—</div><div class="var"></div>
+        <div class="sub num"></div>
+        <svg class="spark" width="380" height="380" viewBox="0 0 380 380" data-n="13"></svg>
+        <div class="spark-info num"></div>
+        <div class="fonte"></div>
+      </div>
+    </section>
+
+    <!-- 7. NOTÍCIAS -->
+    <section class="slide" id="s-noticias" data-nome="Notícias" data-seg="30">
+      <div class="card">
+        <div class="cab"><svg viewBox="0 0 24 24" data-icone="jornal"></svg><h2>Notícias do agro</h2><span class="selo" id="noticias-selo">g1 Agro · Canal Rural</span></div>
+        <div class="lista" id="noticias"></div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <div class="abas" id="abas"></div>
+    <div class="faixa num" id="faixa"></div>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ================= CONFIGURAÇÃO =================
+  var CONFIG = {
+    dadosUrl: 'data.json',                     // gerado pelo coletor (GitHub Actions)
+    versaoUrl: 'versao.txt',                   // muda quando o painel é republicado → recarrega sozinho
+    dolarUrl: 'https://economia.awesomeapi.com.br/json/last/USD-BRL',
+    dolarHistUrl: 'https://economia.awesomeapi.com.br/json/daily/USD-BRL/30',
+    climaUrl: 'https://api.open-meteo.com/v1/forecast?latitude=-23.4253&longitude=-51.9386' +
+      '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,is_day' +
+      '&hourly=temperature_2m,precipitation_probability,precipitation,relative_humidity_2m,wind_speed_10m,wind_gusts_10m' +
+      '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_gusts_10m_max,sunrise,sunset,uv_index_max' +
+      '&timezone=America%2FSao_Paulo&forecast_days=8',
+    cidadesUrl: 'https://api.open-meteo.com/v1/forecast?daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
+      '&timezone=America%2FSao_Paulo&forecast_days=2',
+    satUrl: 'https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0' +
+      '&STYLES=&CRS=EPSG:4326&BBOX=-27.4,-55.6,-21.9,-47.6&WIDTH=1100&HEIGHT=760&FORMAT=image/jpeg',
+    chuvaUrl: 'https://api.open-meteo.com/v1/forecast?latitude=-23.4253&longitude=-51.9386' +
+      '&daily=precipitation_sum&timezone=America%2FSao_Paulo&past_days=30&forecast_days=14',
+    segundosPorSlide: 30                       // cada slide pode ter o seu em data-seg="…"
+  };
+  var MIN = 60 * 1000;
+  var INTERVALO = { dados: 5 * MIN, dolar: 5 * MIN, dolarHist: 60 * MIN, clima: 20 * MIN, chuva: 60 * MIN, versao: 60 * MIN };
+  var FUSO = 'America/Sao_Paulo';
+  // Conversão de bushel para saca de 60 kg (soja e trigo: 27,216 kg/bu; milho: 25,401 kg/bu).
+  var BU_POR_SACA = { soja: 60 / 27.2155, trigo: 60 / 27.2155, milho: 60 / 25.4012 };
+  // ================================================
+
+  var CHAVE = 'painelAgro.v1';
+  var estado = carregar() || {};
+  estado.ok = estado.ok || {};
+
+  function carregar() { try { return JSON.parse(localStorage.getItem(CHAVE)); } catch (e) { return null; } }
+  function salvar() { try { localStorage.setItem(CHAVE, JSON.stringify(estado)); } catch (e) { /* sem espaço: segue só em memória */ } }
+
+  // ---------- formatação ----------
+  var fmtCache = {};
+  function nf(dec) {
+    if (!fmtCache[dec]) fmtCache[dec] = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    return fmtCache[dec];
+  }
+  function n(v, dec) { return v == null || isNaN(v) ? '—' : nf(dec).format(v); }
+  function rs(v, dec) { return 'R$ ' + n(v, dec == null ? 2 : dec); }
+  function us(v, dec) { return 'US$ ' + n(v, dec == null ? 2 : dec); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  var partesSP = new Intl.DateTimeFormat('pt-BR', { timeZone: FUSO, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+  function sp(d) { // partes da data no horário de Brasília
+    var o = {};
+    partesSP.formatToParts(d).forEach(function (p) { o[p.type] = p.value; });
+    return { dia: o.day, mes: o.month, ano: o.year, hora: o.hour === '24' ? '00' : o.hour, min: o.minute };
+  }
+  function hojeISO() { var p = sp(new Date()); return p.ano + '-' + p.mes + '-' + p.dia; }
+  function diaISO(s) { // data pura (calendário) ou ISO completo → AAAA-MM-DD em Brasília
+    if (!s) return '';
+    if (s.length === 10) return s;
+    var p = sp(new Date(s)); return p.ano + '-' + p.mes + '-' + p.dia;
+  }
+  function ddmm(s) { var d = diaISO(s); return d ? d.slice(8, 10) + '/' + d.slice(5, 7) : ''; }
+  function hhmm(t) { var p = sp(new Date(t)); return p.hora + ':' + p.min; }
+  function desde(t) { // "14:20" se hoje, "19/10 14:20" se outro dia
+    return (diaISO(new Date(t).toISOString()) === hojeISO() ? '' : ddmm(new Date(t).toISOString()) + ' ') + hhmm(t);
+  }
+  var MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  function mesAno(s) { return MESES[+s.slice(5, 7) - 1] + '/' + s.slice(2, 4); }
+
+  var PERIODO = { dia: 'no dia', semana: 'na semana', 'mês': 'no mês' };
+  function htmlVar(p, periodo) {
+    if (p == null || isNaN(p)) return '<span class="igual">sem variação</span>';
+    var cls = Math.abs(p) < 0.05 ? 'igual' : p > 0 ? 'alta' : 'baixa';
+    var seta = cls === 'igual' ? '■' : cls === 'alta' ? '▲' : '▼';
+    var txt = (cls === 'alta' ? '+' : cls === 'baixa' ? '−' : '') + n(Math.abs(p), 1) + '%';
+    return '<span class="' + cls + '">' + seta + ' ' + txt + '</span>' + (periodo ? '<span class="per">' + periodo + '</span>' : '');
+  }
+
+  // ---------- DOM ----------
+  function $(id) { return document.getElementById(id); }
+  function q(el, sel) { return el ? el.querySelector(sel) : null; }
+  function setHTML(el, h) { if (el && el.innerHTML !== h) el.innerHTML = h; }
+  function setTxt(el, t) { if (el && el.textContent !== t) el.textContent = t; }
+  function setClasse(el, c) { if (el && el.className !== c) el.className = c; }
+
+  // ---------- ícones ----------
+  var ICONES = {
+    soja: '<path d="M5 19c-2-2-1.5-6 1.5-9l4.5-4.5c3-3 7-3.5 9-1.5s1.5 6-1.5 9L14 17.5c-3 3-7 3.5-9 1.5z"/><circle cx="8.6" cy="15.4" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="15.4" cy="8.6" r="1.7"/>',
+    milho: '<path d="M12 2.5c2.6 0 3.8 4 3.8 8.5S14.6 19 12 19s-3.8-3.5-3.8-8 1.2-8.5 3.8-8.5z"/><path d="M8.6 8h6.8M8.3 11.5h7.4M8.8 15h6.4M12 3v15.5"/><path d="M8.4 13.5C5 14.5 4 18 4 21.5c3 0 5.5-1 7-3.5M15.6 13.5c3.4 1 4.4 4.5 4.4 8-3 0-5.5-1-7-3.5"/>',
+    trigo: '<path d="M12 22V6"/><path d="M12 6c-1.6-.8-2.3-2.3-2.2-4 1.6.7 2.3 2.1 2.2 4zM12 6c1.6-.8 2.3-2.3 2.2-4-1.6.7-2.3 2.1-2.2 4z"/><path d="M12 11c-2-.2-3.4-1.5-3.8-3.4 2 .1 3.4 1.4 3.8 3.4zM12 11c2-.2 3.4-1.5 3.8-3.4-2 .1-3.4 1.4-3.8 3.4zM12 15.5c-2-.2-3.4-1.5-3.8-3.4 2 .1 3.4 1.4 3.8 3.4zM12 15.5c2-.2 3.4-1.5 3.8-3.4-2 .1-3.4 1.4-3.8 3.4z"/>',
+    dolar: '<circle cx="12" cy="12" r="9.2"/><path d="M15 8.6c-.5-1-1.6-1.6-3-1.6-1.8 0-3 1-3 2.3 0 3.2 6 1.7 6 4.9 0 1.3-1.3 2.3-3 2.3-1.5 0-2.6-.6-3.1-1.6M12 5.4v13.2"/>',
+    diesel: '<path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M3 21h13M6.5 7h6v4h-6z"/><path d="M15 10h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V9l-3-3"/>',
+    adubo: '<path d="M6.5 7.5 5 20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1L17.5 7.5"/><path d="M8 7.5C8 5 9.5 3 12 3s4 2 4 4.5M6.5 7.5h11M9.5 14h5"/>',
+    local: '<path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+    jornal: '<path d="M4 5h13v14a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v10a2 2 0 0 1-4 0M7.5 9h6M7.5 12.5h6M7.5 16h4"/>',
+    sol: '<circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2 12h2.2M19.8 12H22M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/>',
+    lua: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+    parcial: '<path d="M8 3v1.5M3.5 8H2M4.2 4.2l1 1M12.6 5.2l1-1"/><path d="M5.3 10.8A3.6 3.6 0 1 1 11.6 7"/><path d="M8 20h9.5a3.5 3.5 0 0 0 .4-7A5.5 5.5 0 0 0 7.3 14 3 3 0 0 0 8 20z"/>',
+    nublado: '<path d="M7 19h10.5a4 4 0 0 0 .5-8A6 6 0 0 0 6.4 12.1 3.5 3.5 0 0 0 7 19z"/>',
+    chuva: '<path d="M7 15h10.5a4 4 0 0 0 .5-8A6 6 0 0 0 6.4 8.1 3.5 3.5 0 0 0 7 15z"/><path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3"/>',
+    tempestade: '<path d="M7 15h10.5a4 4 0 0 0 .5-8A6 6 0 0 0 6.4 8.1 3.5 3.5 0 0 0 7 15z"/><path d="M12.5 15l-2 3.5h3l-2 3.5"/>',
+    neblina: '<path d="M4 9h16M3 13h18M5 17h14"/>',
+    gota: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+    termo: '<path d="M10 14.5V5a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z"/><path d="M12 9v7"/>',
+    vento: '<path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h7"/>',
+    umidade: '<path d="M7 4s4 4.4 4 7.4a4 4 0 0 1-8 0C3 8.4 7 4 7 4zM17 10s4 4.4 4 7.4a4 4 0 0 1-8 0c0-3 4-7.4 4-7.4z"/>',
+    relogio: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    aviso: '<path d="M12 3 2.5 20h19L12 3z"/><path d="M12 10v4.5M12 17.5v.01"/>',
+    pulverizador: '<path d="M4 20h9M8.5 20V9h4l2 3v8"/><path d="M8.5 9V6h3M14.5 12h2M18 9.5l2.5-1.5M18 12h3M18 14.5l2.5 1.5"/>'
+  };
+  function svgIcone(nome) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + ICONES[nome] + '</svg>';
+  }
+  function prepararIcones() {
+    var els = document.querySelectorAll('svg[data-icone]');
+    for (var i = 0; i < els.length; i++) {
+      var s = els[i];
+      s.setAttribute('fill', 'none'); s.setAttribute('stroke', 'currentColor'); s.setAttribute('stroke-width', '1.8');
+      s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round');
+      s.innerHTML = ICONES[s.getAttribute('data-icone')];
+    }
+  }
+
+  // ---------- frescor dos dados ----------
+  // Horário de pregão aproximado (seg–sex, 06h–21h de Brasília): fora dele o coletor roda a cada 3 h.
+  function emPregao() {
+    var p = sp(new Date()), dow = new Date(p.ano + '-' + p.mes + '-' + p.dia + 'T12:00:00Z').getUTCDay();
+    return dow >= 1 && dow <= 5 && +p.hora >= 6 && +p.hora < 21;
+  }
+  // Devolve desde quando o item está desatualizado, ou null se está em dia.
+  function velhoDesde(item) {
+    if (!item) return null;
+    // Fonte em erro: cotação ao vivo fica velha na hora; dado diário/semanal/mensal só após 6 h de falha
+    // (uma queda passageira do site não muda o fato de o valor ainda ser o último publicado).
+    if (item.erroDesde && (item.freq === 'live' || Date.now() - new Date(item.erroDesde).getTime() > 6 * 60 * MIN)) return item.coletadoEm || item.erroDesde;
+    var col = item.coletadoEm ? new Date(item.coletadoEm).getTime() : 0;
+    var lim = item.freq === 'live' ? (emPregao() ? 60 : 300) * MIN : 26 * 60 * MIN;
+    return col && Date.now() - col > lim ? item.coletadoEm : null;
+  }
+  function aoVivo(item) { return item.freq === 'live' && diaISO(item.data) === hojeISO() && emPregao() && !velhoDesde(item); }
+  // Selo de frequência: honesto sobre o que é "ao vivo" e o que não é.
+  function textoSelo(item) {
+    if (item.freq === 'live') {
+      if (aoVivo(item)) return item.atrasoMin ? 'ao vivo · ' + item.atrasoMin + ' min de atraso' : 'ao vivo';
+      // Com pregão aberto mas dado parado, mostra a hora da última cotação em vez de "fechamento".
+      return diaISO(item.data) === hojeISO() ? 'última cotação ' + hhmm(item.data) : 'fechamento ' + ddmm(item.data);
+    }
+    if (item.freq === 'diario') return 'diário · ' + ddmm(item.data);
+    if (item.freq === 'semanal') return 'semanal · até ' + ddmm(item.data);
+    if (item.freq === 'mensal') return 'mensal · ' + mesAno(item.data);
+    return '';
+  }
+
+  // ---------- itens ----------
+  function itemDados(id) { return estado.dados && estado.dados.itens ? estado.dados.itens[id] : null; }
+  // Dólar: usa o mais recente entre a consulta direta (navegador) e o data.json.
+  function dolar() {
+    var d = estado.dolar, reserva = itemDados('usd');
+    if (reserva && (!d || new Date(reserva.data) > new Date(d.data))) d = reserva;
+    if (!d) return null;
+    var h = estado.dolarHist && estado.dolarHist.length ? estado.dolarHist : d.hist;
+    return { valor: d.valor, data: d.data, var: d.var, freq: 'live', atrasoMin: 0, fonte: 'AwesomeAPI', hist: h, coletadoEm: d === estado.dolar ? estado.ok.dolar : d.coletadoEm };
+  }
+  function item(id) { return id === 'usd' ? dolar() : itemDados(id); }
+  function cambio() { var d = dolar(); return d ? d.valor : null; }
+
+  // Como cada item aparece: valor principal e linha complementar.
+  var UNIDADE = { 'R$/sc': '/sc', 'R$/t': '/t', 'R$/L': '/L', 'US$/bu': '/bu', 'US$/sc': '/sc', 'US$/t': '/t' };
+  function valorHTML(id, it) {
+    if (id === 'usd') return rs(it.valor, 3);
+    var dec = it.unidade === 'R$/t' || it.unidade === 'US$/t' ? 0 : 2;
+    var base = it.unidade.indexOf('US$') === 0 ? us(it.valor, dec) : rs(it.valor, dec);
+    return base + '<small>' + (UNIDADE[it.unidade] || '') + '</small>';
+  }
+  function subTexto(id, it) {
+    var c = cambio();
+    if (id === 'soja_cbot' || id === 'milho_cbot' || id === 'trigo_cbot') {
+      var g = id.split('_')[0];
+      return c ? '≈ ' + rs(it.valor * BU_POR_SACA[g] * c) + '/sc em reais' : '';
+    }
+    if (id === 'soja_b3') return (it.contrato ? it.contrato.toLowerCase() + ' · ' : '') + (c ? '≈ ' + rs(it.valor * c) + '/sc' : '');
+    if (id === 'trigo_cepea') return '≈ ' + rs(it.valor * 0.06) + ' por saca';
+    if (/^(ureia|dap|kcl)$/.test(id)) return c ? '≈ ' + rs(it.valor * c, 0) + '/t no câmbio de hoje' : '';
+    return '';
+  }
+
+  // ---------- minigráfico ----------
+  function spark(svg, hist, qtd) {
+    if (!svg) return null;
+    var serie = (hist || []).slice(-(qtd || 30)).filter(function (h) { return h[1] != null; });
+    if (serie.length < 3) { setHTML(svg, ''); return null; }
+    var pts = serie.map(function (h) { return h[1]; });
+    var w = +svg.getAttribute('width'), h = +svg.getAttribute('height'), pad = 7;
+    var min = Math.min.apply(null, pts), max = Math.max.apply(null, pts), amp = max - min || 1;
+    var xy = pts.map(function (v, i) {
+      return [pad + i * (w - 2 * pad) / (pts.length - 1), pad + (1 - (v - min) / amp) * (h - 2 * pad)];
+    });
+    var d = xy.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join('');
+    var ult = xy[xy.length - 1];
+    setHTML(svg,
+      '<path class="area" d="' + d + 'L' + ult[0].toFixed(1) + ' ' + h + 'L' + pad + ' ' + h + 'Z"/>' +
+      '<path class="traco" d="' + d + '"/>' +
+      '<circle class="fim" cx="' + ult[0].toFixed(1) + '" cy="' + ult[1].toFixed(1) + '" r="6"/>');
+    return { min: min, max: max, ini: serie[0][0], fim: serie[serie.length - 1][0], n: serie.length };
+  }
+
+  // ---------- cartões genéricos (data-item) ----------
+  function renderCartao(card) {
+    var id = card.getAttribute('data-item');
+    var it = item(id);
+    if (!it) return;
+    var conv = card.getAttribute('data-conv');
+    var c = cambio();
+    if (conv) {
+      // Cotação de Chicago convertida para R$/saca (sem prêmio de porto, frete e impostos).
+      setHTML(q(card, '.valor'), c ? rs(it.valor * BU_POR_SACA[conv] * c) + '<small>/sc</small>' : '—');
+      setTxt(q(card, '.sub'), us(it.valor) + '/bu × R$ ' + n(c, 3) + ' · sem prêmio, frete e impostos');
+    } else {
+      setHTML(q(card, '.valor'), valorHTML(id, it));
+      var v = q(card, '.var');
+      if (v) {
+        var h = htmlVar(it.var && it.var.pct, PERIODO[(it.var && it.var.periodo) || 'dia']);
+        if (v.getAttribute('data-mes') && it.varMes != null) h += '<span class="sep">|</span>' + htmlVar(it.varMes, 'no mês');
+        setHTML(v, h);
+      }
+      var sub = q(card, '.sub');
+      if (sub) {
+        var outro = sub.getAttribute('data-item-sub');
+        if (outro) { var o = item(outro); setHTML(sub, o ? 'Maringá: <b>' + rs(o.valor) + '/L</b> ' + htmlVar(o.var && o.var.pct) : ''); }
+        else setTxt(sub, subTexto(id, it));
+      }
+      var s = q(card, '.spark');
+      if (s) {
+        var r = spark(s, it.hist, +s.getAttribute('data-n'));
+        var info = q(card, '.spark-info');
+        if (info) {
+          if (!r) setHTML(info, '<span>histórico em formação</span>');
+          else {
+            var fmtV = function (x) { return id === 'usd' ? n(x, 3) : n(x, it.unidade === 'R$/t' || it.unidade === 'US$/t' ? 0 : 2); };
+            var rotIni = it.freq === 'mensal' ? mesAno(r.ini) : ddmm(r.ini);
+            var rotFim = it.freq === 'mensal' ? mesAno(r.fim) : ddmm(r.fim);
+            setHTML(info, '<span>' + rotIni + '</span><span>mín ' + fmtV(r.min) + ' · máx ' + fmtV(r.max) + '</span><span>' + rotFim + '</span>');
+          }
+        }
+      }
+    }
+    var selo = q(card, '.selo');
+    var velho = velhoDesde(it);
+    if (selo) {
+      setTxt(selo, textoSelo(it));
+      setClasse(selo, 'selo' + (aoVivo(it) ? ' vivo' : ''));
+    }
+    var f = q(card, '.fonte');
+    if (f) {
+      var txt = it.fonte + (it.freq === 'live' && it.data ? ' · cotação de ' + desde(it.data) : '');
+      setTxt(f, velho ? '⚠ desatualizado desde ' + desde(velho) + ' · ' + it.fonte : txt);
+      setClasse(f, 'fonte' + (velho ? ' velho' : ''));
+    }
+    var base = card.className.replace(/\s*velho/g, '');
+    setClasse(card, base + (velho ? ' velho' : ''));
+  }
+
+  function renderCartoes() {
+    var cards = document.querySelectorAll('[data-item]');
+    for (var i = 0; i < cards.length; i++) {
+      if (!cards[i].classList.contains('card')) continue;
+      try { renderCartao(cards[i]); } catch (e) { if (window.console) console.error(cards[i].getAttribute('data-item'), e); }
+    }
+  }
+
+  function renderDolar30() {
+    var d = dolar(), card = $('usd-30');
+    if (!d || !d.hist || d.hist.length < 2) return;
+    var h = d.hist.slice(-30), ini = h[0][1];
+    var p = (d.valor / ini - 1) * 100;
+    setHTML(q(card, '.valor'), htmlVar(p));
+    var vals = h.map(function (x) { return x[1]; });
+    setTxt(q(card, '.sub'), 'de ' + rs(ini, 3) + ' (' + ddmm(h[0][0]) + ') para ' + rs(d.valor, 3) + ' · mín ' + n(Math.min.apply(null, vals), 3) + ' · máx ' + n(Math.max.apply(null, vals), 3));
+  }
+
+  // ---------- tempo ----------
+  function wmo(c, dia) { // código WMO do Open-Meteo → [ícone, descrição]
+    if (c === 0) return [dia === 0 ? 'lua' : 'sol', 'Céu limpo'];
+    if (c <= 2) return ['parcial', 'Parcialmente nublado'];
+    if (c === 3) return ['nublado', 'Nublado'];
+    if (c === 45 || c === 48) return ['neblina', 'Neblina'];
+    if (c >= 51 && c <= 57) return ['chuva', 'Garoa'];
+    if (c >= 61 && c <= 67) return ['chuva', c >= 65 ? 'Chuva forte' : 'Chuva'];
+    if (c >= 80 && c <= 82) return ['chuva', 'Pancadas de chuva'];
+    if (c >= 95) return ['tempestade', 'Tempestade'];
+    return ['nublado', 'Nublado'];
+  }
+  var DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  var RUMOS = ['N', 'NE', 'L', 'SE', 'S', 'SO', 'O', 'NO'];
+  function rumo(g) { return RUMOS[Math.round(((g % 360) + 360) % 360 / 45) % 8]; }
+  function nomeDia(dataISO) { // "2026-10-21" → "hoje" / "amanhã" / "qua 21"
+    var hoje = hojeISO();
+    if (dataISO === hoje) return 'hoje';
+    var am = new Date(new Date(hoje + 'T12:00:00Z').getTime() + 864e5).toISOString().slice(0, 10);
+    if (dataISO === am) return 'amanhã';
+    return DIAS[new Date(dataISO + 'T12:00:00Z').getUTCDay()] + ' ' + dataISO.slice(8, 10);
+  }
+  function horaCurta(t) { var p = sp(new Date(t)); return +p.hora + 'h' + (p.min === '00' ? '' : p.min); }
+  function climaOk() { var c = estado.clima; return c && c.current && c.hourly && c.daily && c.daily.sunrise ? c : null; }
+  function climaVelho() {
+    var ok = estado.ok.clima;
+    return ok && Date.now() - new Date(ok).getTime() > 2 * 60 * MIN ? ok : null;
+  }
+  // Índice da hora atual na série horária do Open-Meteo (horários locais "AAAA-MM-DDTHH:00").
+  function idxAgora(c) {
+    var p = sp(new Date()), chave = p.ano + '-' + p.mes + '-' + p.dia + 'T' + p.hora + ':00';
+    var t = c.hourly.time;
+    for (var i = 0; i < t.length; i++) if (t[i] >= chave) return i;
+    return -1;
+  }
+
+  // ----- alertas -----
+  var COR_SEV = { 'Perigo Potencial': '#ffd23f', 'Perigo': '#ff8c1a', 'Grande Perigo': '#ff4d4d' };
+  // Alertas oficiais do INMET (vêm no data.json), juntando avisos seguidos do mesmo evento.
+  function alertasInmet() {
+    var lista = ((estado.dados && estado.dados.alertas) || []).filter(function (a) { return new Date(a.fim).getTime() > Date.now(); });
+    var out = [];
+    lista.forEach(function (a) {
+      var ult = out[out.length - 1];
+      if (ult && ult.evento === a.evento && ult.severidade === a.severidade && new Date(a.inicio) - new Date(ult.fim) <= 5 * MIN) ult.fim = a.fim;
+      else out.push({ evento: a.evento, severidade: a.severidade, inicio: a.inicio, fim: a.fim, fonte: 'INMET', cor: COR_SEV[a.severidade] || '#ffd23f' });
+    });
+    return out;
+  }
+  // Riscos calculados pela previsão (não oficiais): geada, calor, chuva volumosa, rajadas.
+  function alertasPrevisao() {
+    var c = climaOk(), out = [];
+    if (!c) return out;
+    var d = c.daily;
+    for (var i = 0; i < d.time.length && i < 8; i++) {
+      var dia = nomeDia(d.time[i]);
+      if (d.temperature_2m_min[i] <= 3) out.push({ evento: d.temperature_2m_min[i] <= 1 ? 'Geada forte possível' : 'Risco de geada', det: dia + ' · mín ' + Math.round(d.temperature_2m_min[i]) + '°', dia: d.time[i] });
+      if (d.temperature_2m_max[i] >= 35) out.push({ evento: 'Calor forte', det: dia + ' · máx ' + Math.round(d.temperature_2m_max[i]) + '°', dia: d.time[i] });
+      if (d.precipitation_sum[i] >= 50) out.push({ evento: 'Chuva volumosa', det: dia + ' · ' + n(d.precipitation_sum[i], 0) + ' mm', dia: d.time[i] });
+      if (d.wind_gusts_10m_max && d.wind_gusts_10m_max[i] >= 60) out.push({ evento: 'Rajadas fortes', det: dia + ' · até ' + Math.round(d.wind_gusts_10m_max[i]) + ' km/h', dia: d.time[i] });
+    }
+    return out;
+  }
+  function periodo(a) {
+    var di = diaISO(a.inicio), df = diaISO(a.fim);
+    var ini = new Date(a.inicio).getTime() <= Date.now() ? 'agora' : nomeDia(di) + ' ' + horaCurta(a.inicio);
+    return di === df ? nomeDia(di) + ', ' + (ini === 'agora' ? 'até ' : horaCurta(a.inicio) + ' às ') + horaCurta(a.fim)
+      : ini + ' até ' + nomeDia(df) + ' ' + horaCurta(a.fim);
+  }
+  function renderAlertas() {
+    var of = alertasInmet(), pv = alertasPrevisao(), card = $('th-alertas');
+    var linhas = of.slice(0, 3).map(function (a) {
+      return '<div class="alerta"><i class="sev" style="background:' + a.cor + '"></i><b>' + esc(a.evento) + '</b><span class="q">' + periodo(a) + '</span><span class="o">INMET · ' + esc(a.severidade.toLowerCase()) + '</span></div>';
+    }).concat(pv.slice(0, Math.max(0, 3 - of.length)).map(function (a) {
+      return '<div class="alerta"><i class="sev" style="background:var(--warn)"></i><b>' + a.evento + '</b><span class="q">' + a.det + '</span><span class="o">pela previsão</span></div>';
+    }));
+    setHTML($('alertas'), linhas.join(''));
+    setClasse(card, 'card' + (linhas.length ? '' : ' vazio-alerta'));
+    var col = estado.dados && estado.dados.alertasColetadoEm;
+    setTxt($('alertas-selo'), 'INMET' + (col ? ' · ' + desde(col) : ''));
+  }
+  // Etiqueta curta de alerta para um dia da previsão.
+  function alertaDoDia(dataISO) {
+    var ini = new Date(dataISO + 'T00:00:00-03:00').getTime(), fim = ini + 864e5;
+    var a = alertasInmet().filter(function (x) { return new Date(x.inicio).getTime() < fim && new Date(x.fim).getTime() > ini; })[0];
+    if (a) return { txt: '⚠ ' + a.evento, cor: a.cor };
+    var p = alertasPrevisao().filter(function (x) { return x.dia === dataISO; })[0];
+    return p ? { txt: '⚠ ' + p.evento, cor: '#fb923c' } : null;
+  }
+
+  // ----- clima no topo (sempre visível) -----
+  function renderClimaMini() {
+    var c = climaOk();
+    if (!c) return;
+    var w = wmo(c.current.weather_code, c.current.is_day);
+    setHTML($('cm-icone'), ICONES[w[0]]);
+    setTxt($('cm-temp'), Math.round(c.current.temperature_2m) + '°');
+    var of = alertasInmet().filter(function (a) { return new Date(a.inicio).getTime() < Date.now() + 48 * 60 * MIN; })[0];
+    var el = $('cm-linha');
+    if (of) { setTxt(el, '⚠ ' + of.evento + ' ' + (new Date(of.inicio).getTime() <= Date.now() ? 'agora' : nomeDia(diaISO(of.inicio)))); setClasse(el, 'cm-l alerta'); }
+    else {
+      var pc = c.daily.precipitation_probability_max[0];
+      setTxt(el, 'chuva hoje ' + (pc == null ? '—' : pc + '%'));
+      setClasse(el, 'cm-l');
+    }
+  }
+
+  // ----- slide "Tempo hoje" -----
+  function renderTempoHoje() {
+    var c = climaOk();
+    if (!c) return;
+    var cur = c.current, d = c.daily;
+    var w = wmo(cur.weather_code, cur.is_day);
+    setHTML($('tempo-icone'), ICONES[w[0]]);
+    setTxt($('tempo-temp'), Math.round(cur.temperature_2m) + '°');
+    setTxt($('tempo-desc'), w[1]);
+    setTxt($('tempo-sens'), 'Sensação térmica ' + Math.round(cur.apparent_temperature) + '°');
+    setHTML($('tempo-mx'), 'Hoje: máx <b>' + Math.round(d.temperature_2m_max[0]) + '°</b> · mín <b>' + Math.round(d.temperature_2m_min[0]) + '°</b>');
+    setHTML($('tempo-chuva'), 'Chuva hoje: <b>' + (d.precipitation_probability_max[0] == null ? '—' : d.precipitation_probability_max[0] + '%') + '</b> · ' + n(d.precipitation_sum[0], 0) + ' mm');
+    setHTML($('tempo-vento'), 'Vento <b>' + Math.round(cur.wind_speed_10m) + ' km/h ' + rumo(cur.wind_direction_10m) + '</b> · rajadas <b>' + Math.round(cur.wind_gusts_10m) + '</b>');
+    setHTML($('tempo-ar'), 'Umidade <b>' + cur.relative_humidity_2m + '%</b> · índice UV <b>' + Math.round(d.uv_index_max[0]) + '</b>');
+    setHTML($('tempo-sol'), 'Sol nasce <b>' + d.sunrise[0].slice(11, 16) + '</b> · se põe <b>' + d.sunset[0].slice(11, 16) + '</b>');
+    var v = climaVelho(), selo = $('tempo-selo');
+    setTxt(selo, v ? '⚠ desatualizado desde ' + desde(v) : 'Open-Meteo · ' + hhmm(estado.ok.clima));
+    setClasse(selo, 'selo' + (v ? ' velho' : ''));
+    renderGraf24h(c);
+    renderPulverizacao(c);
+  }
+
+  function renderGraf24h(c) {
+    var box = $('h24-graf'), W = box.clientWidth, H = box.clientHeight;
+    var i0 = idxAgora(c);
+    if (!W || !H || i0 < 0) return;
+    var hr = c.hourly, N = Math.min(24, hr.time.length - i0);
+    var temps = hr.temperature_2m.slice(i0, i0 + N), prob = hr.precipitation_probability.slice(i0, i0 + N), mm = hr.precipitation.slice(i0, i0 + N);
+    var tMin = Math.min.apply(null, temps) - 1, tMax = Math.max.apply(null, temps) + 1;
+    var col = W / N, topo = 40, baseT = H * 0.50, baseB = H - 34, altB = baseB - (H * 0.58);
+    var out = [];
+    // linhas de referência das barras de chuva (0, 50, 100%)
+    [0, 50, 100].forEach(function (v) {
+      var y = baseB - altB * v / 100;
+      out.push('<line x1="0" x2="' + W + '" y1="' + y + '" y2="' + y + '" stroke="#2e2f33" stroke-width="1"/>');
+    });
+    var pts = [];
+    for (var i = 0; i < N; i++) {
+      var x = (i + 0.5) * col;
+      var hb = altB * (prob[i] || 0) / 100;
+      if (hb > 0) out.push('<rect x="' + (x - col * 0.32).toFixed(1) + '" y="' + (baseB - hb).toFixed(1) + '" width="' + (col * 0.64).toFixed(1) + '" height="' + hb.toFixed(1) + '" rx="3" fill="#60a5fa" fill-opacity="' + (0.35 + 0.55 * prob[i] / 100).toFixed(2) + '"/>');
+      var y = topo + (1 - (temps[i] - tMin) / (tMax - tMin)) * (baseT - topo);
+      pts.push(x.toFixed(1) + ',' + y.toFixed(1));
+      var hora = +hr.time[i0 + i].slice(11, 13);
+      if (hora === 0) out.push('<line x1="' + (x - col / 2) + '" x2="' + (x - col / 2) + '" y1="8" y2="' + baseB + '" stroke="#4a4b50" stroke-dasharray="6 6"/>' +
+        '<text x="' + (x - col / 2 + 8) + '" y="24" font-size="20" fill="#c8c4bc" font-weight="700">' + nomeDia(hr.time[i0 + i].slice(0, 10)) + '</text>');
+      if (i % 3 === 0) {
+        out.push('<text x="' + x + '" y="' + (y - 14) + '" text-anchor="middle" font-size="25" font-weight="700" fill="#f5f3ee">' + Math.round(temps[i]) + '°</text>');
+        out.push('<text x="' + x + '" y="' + (H - 6) + '" text-anchor="middle" font-size="20" fill="#8f8b84">' + hora + 'h</text>');
+        if (prob[i] >= 10) out.push('<text x="' + x + '" y="' + (baseB - hb - 8) + '" text-anchor="middle" font-size="19" fill="#60a5fa">' + prob[i] + '%</text>');
+      }
+    }
+    out.push('<polyline points="' + pts.join(' ') + '" fill="none" stroke="#e8b04b" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>');
+    for (var k = 0; k < N; k += 3) { var xy = pts[k].split(','); out.push('<circle cx="' + xy[0] + '" cy="' + xy[1] + '" r="5" fill="#e8b04b"/>'); }
+    setHTML(box, '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' + out.join('') + '</svg>');
+    var total = mm.reduce(function (a, b) { return a + (b || 0); }, 0);
+    setTxt($('h24-selo'), 'temperatura · chance de chuva · ' + n(total, total < 10 ? 1 : 0) + ' mm previstos');
+  }
+
+  // Condição de pulverização por hora (critério agronômico usual; é só uma indicação).
+  function condPulv(t, ur, v, pp, mm) {
+    var mot = [];
+    if (mm >= 0.2 || pp >= 50) mot.push('chuva');
+    if (v > 15) mot.push('vento forte');
+    if (t > 32) mot.push('calor');
+    if (ur < 45) mot.push('ar seco');
+    if (mot.length) return ['ruim', mot];
+    if (pp >= 30) mot.push('chance de chuva');
+    if (v > 10) mot.push('vento forte');
+    if (v < 3) mot.push('vento fraco (risco de inversão)');
+    if (t > 30) mot.push('calor');
+    if (ur < 55) mot.push('ar seco');
+    return [mot.length ? 'atencao' : 'boa', mot];
+  }
+  function renderPulverizacao(c) {
+    var hr = c.hourly, i0 = idxAgora(c);
+    if (i0 < 0) return;
+    var N = Math.min(24, hr.time.length - i0), cel = [], motivos = {}, faixas = [], ini = -1;
+    for (var i = 0; i < N; i++) {
+      var k = i0 + i;
+      var r = condPulv(hr.temperature_2m[k], hr.relative_humidity_2m[k], hr.wind_speed_10m[k], hr.precipitation_probability[k] || 0, hr.precipitation[k] || 0);
+      r[1].forEach(function (m) { motivos[m] = (motivos[m] || 0) + 1; });
+      var hora = +hr.time[k].slice(11, 13);
+      cel.push('<div class="pulv-h' + (hora === 0 ? ' meia' : '') + '"><div class="c ' + r[0] + '"></div><div class="l">' + (hora === 0 ? nomeDia(hr.time[k].slice(0, 10)).slice(0, 3) : hora + 'h') + '</div></div>');
+      if (r[0] === 'boa' && ini < 0) ini = k;
+      if ((r[0] !== 'boa' || i === N - 1) && ini >= 0) {
+        var fimK = r[0] === 'boa' ? k + 1 : k;
+        if (fimK - ini >= 2) faixas.push([ini, fimK]);
+        ini = -1;
+      }
+    }
+    setHTML($('pulv-barra'), cel.join(''));
+    var res;
+    if (faixas.length) {
+      res = 'Melhor janela: ' + faixas.slice(0, 2).map(function (f) {
+        var h1 = +hr.time[f[0]].slice(11, 13), h2 = (+hr.time[f[0]].slice(11, 13) + (f[1] - f[0])) % 24;
+        return nomeDia(hr.time[f[0]].slice(0, 10)) + ' ' + h1 + 'h às ' + h2 + 'h';
+      }).join('  ·  ');
+    } else res = 'Sem janela boa nas próximas 24 horas';
+    setTxt($('pulv-resumo'), res);
+    var top = Object.keys(motivos).sort(function (a, b) { return motivos[b] - motivos[a]; })[0];
+    setTxt($('pulv-motivo'), top ? 'Principal limitação: ' + top + ' (' + motivos[top] + ' h)' : 'Condições favoráveis em todas as horas');
+  }
+
+  // ----- slide "Previsão e chuva" -----
+  function renderPrevisao() {
+    var c = climaOk();
+    if (!c) return;
+    var d = c.daily, h = '';
+    for (var i = 1; i <= 7 && i < d.time.length; i++) {
+      var wi = wmo(d.weather_code[i], 1), pc = d.precipitation_probability_max[i], al = alertaDoDia(d.time[i]);
+      var dt = new Date(d.time[i] + 'T12:00:00Z');
+      h += '<div class="dia">' +
+        '<div class="al' + (al ? '' : ' vazio') + '"' + (al ? ' style="background:' + al.cor + '"' : '') + '>' + (al ? esc(al.txt) : '·') + '</div>' +
+        '<div class="n">' + (i === 1 ? 'amanhã' : DIAS[dt.getUTCDay()]) + '</div><div class="d">' + d.time[i].slice(8, 10) + '/' + d.time[i].slice(5, 7) + '</div>' +
+        svgIcone(wi[0]) +
+        '<div class="mx num">' + Math.round(d.temperature_2m_max[i]) + '°</div><div class="mn num">' + Math.round(d.temperature_2m_min[i]) + '°</div>' +
+        '<div class="ch num">☂ ' + (pc == null ? '—' : pc + '%') + '</div><div class="mm num">' + n(d.precipitation_sum[i], 0) + ' mm</div>' +
+        '<div class="vt num">rajadas ' + Math.round(d.wind_gusts_10m_max[i]) + ' km/h</div></div>';
+    }
+    setHTML($('tempo-dias'), h);
+    var v = climaVelho(), selo = $('prev-selo');
+    setTxt(selo, v ? '⚠ desatualizado desde ' + desde(v) : 'Open-Meteo · ' + hhmm(estado.ok.clima));
+    setClasse(selo, 'selo' + (v ? ' velho' : ''));
+  }
+
+  function renderChuva() {
+    var c = estado.chuva;
+    if (!c || !c.daily) return;
+    var t = c.daily.time, v = c.daily.precipitation_sum.map(function (x) { return x || 0; });
+    var hoje = hojeISO(), iH = t.indexOf(hoje);
+    if (iH < 0) iH = 30;
+    function soma(a, b) { var s = 0; for (var i = Math.max(0, a); i < Math.min(v.length, b); i++) s += v[i]; return s; }
+    function mmTxt(x) { return n(x, 0) + '<small>mm</small>'; }
+    setHTML($('ch-p7'), mmTxt(soma(iH - 7, iH)));
+    setHTML($('ch-p30'), mmTxt(soma(iH - 30, iH)));
+    setHTML($('ch-f7'), mmTxt(soma(iH, iH + 7)));
+    setHTML($('ch-f14'), mmTxt(soma(iH, iH + 14)));
+
+    var box = $('ch-graf'), W = box.clientWidth, H = box.clientHeight;
+    if (!W || !H) return;
+    var max = Math.max(10, Math.max.apply(null, v)), passo = max <= 20 ? 5 : max <= 50 ? 10 : 25;
+    max = Math.ceil(max / passo) * passo;
+    var esq = 56, base = H - 34, alt = base - 26, col = (W - esq) / t.length, out = [];
+    for (var g = 0; g <= max; g += passo) {
+      var yg = base - alt * g / max;
+      out.push('<line x1="' + esq + '" x2="' + W + '" y1="' + yg + '" y2="' + yg + '" stroke="#2e2f33"/><text x="' + (esq - 10) + '" y="' + (yg + 6) + '" text-anchor="end" font-size="18" fill="#8f8b84">' + g + '</text>');
+    }
+    for (var i = 0; i < t.length; i++) {
+      var x = esq + i * col, hb = alt * v[i] / max, fut = i >= iH;
+      if (hb > 0.5) out.push('<rect x="' + (x + col * 0.15).toFixed(1) + '" y="' + (base - hb).toFixed(1) + '" width="' + (col * 0.7).toFixed(1) + '" height="' + hb.toFixed(1) + '" rx="2" fill="' + (fut ? '#93c5fd' : '#60a5fa') + '" fill-opacity="' + (fut ? 0.55 : 0.95) + '"/>');
+      if (v[i] >= max * 0.35) out.push('<text x="' + (x + col / 2).toFixed(1) + '" y="' + (base - hb - 6).toFixed(1) + '" text-anchor="middle" font-size="17" fill="#c8c4bc">' + Math.round(v[i]) + '</text>');
+      if ((i - iH) % 7 === 0) out.push('<text x="' + (x + col / 2).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="19" fill="' + (i === iH ? '#f5f3ee' : '#8f8b84') + '"' + (i === iH ? ' font-weight="700"' : '') + '>' + (i === iH ? 'hoje' : t[i].slice(8, 10) + '/' + t[i].slice(5, 7)) + '</text>');
+    }
+    var xh = esq + iH * col;
+    out.push('<line x1="' + xh + '" x2="' + xh + '" y1="0" y2="' + base + '" stroke="#f5f3ee" stroke-dasharray="6 6" stroke-opacity=".6"/>');
+    out.push('<text x="' + (xh - 10) + '" y="18" text-anchor="end" font-size="18" fill="#8f8b84">◀ ocorreu</text><text x="' + (xh + 10) + '" y="18" font-size="18" fill="#8f8b84">previsão ▶</text>');
+    setHTML(box, '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' + out.join('') + '</svg>');
+  }
+
+  // ----- slide "Nuvens" -----
+  // Mapa: imagem equiretangular de lon −55,6…−47,6 e lat −27,4…−21,9 em 1100×760 px.
+  function mapaXY(lat, lon) { return [(lon + 55.6) / 8 * 1100, (-21.9 - lat) / 5.5 * 760]; }
+  var CIDADES = [
+    ['Maringá', -23.4253, -51.9386, 1], ['Londrina', -23.3045, -51.1696], ['Paranavaí', -23.0732, -52.4652],
+    ['Umuarama', -23.7661, -53.3206], ['Campo Mourão', -24.0463, -52.3780], ['Cascavel', -24.9555, -53.4552],
+    ['Guarapuava', -25.3935, -51.4562], ['Ponta Grossa', -25.0950, -50.1619], ['Curitiba', -25.4284, -49.2733]
+  ];
+  function desenharCidades() {
+    $('mapa-cidades').innerHTML = CIDADES.map(function (c) {
+      var p = mapaXY(c[1], c[2]), dest = c[3];
+      return '<g class="cid' + (dest ? ' dest' : '') + '"><circle cx="' + p[0].toFixed(0) + '" cy="' + p[1].toFixed(0) + '" r="' + (dest ? 9 : 6) + '"/>' +
+        '<text x="' + (p[0] + 14).toFixed(0) + '" y="' + (p[1] + 9).toFixed(0) + '">' + c[0] + '</text></g>';
+    }).join('');
+  }
+  var sat = { chave: '', quadros: [], i: 0, timer: null };
+  function prepararSatelite() {
+    var s = estado.dados && estado.dados.satelite;
+    if (!s || !s.quadros || !s.quadros.length) return;
+    var chave = s.quadros.join(',');
+    if (chave === sat.chave) return;
+    sat.chave = chave; sat.quadros = s.quadros; sat.i = s.quadros.length - 1;
+    // Pré-carrega os quadros; a troca entre eles é só visibilidade (leve para o box).
+    $('mapa-imgs').innerHTML = s.quadros.map(function (t, k) {
+      return '<img alt="" ' + (k === sat.i ? 'class="on" ' : '') + 'src="' + CONFIG.satUrl + '&LAYERS=' + s.camada + '&TIME=' + t + '">';
+    }).join('');
+    var imgs = $('mapa-imgs').children;
+    for (var k = 0; k < imgs.length; k++) imgs[k].onload = function () { $('mapa-vazio').style.display = 'none'; };
+    $('sat-pts').innerHTML = s.quadros.map(function () { return '<i></i>'; }).join('');
+    mostrarQuadro(sat.i);
+  }
+  function mostrarQuadro(i) {
+    var imgs = $('mapa-imgs').children, pts = $('sat-pts').children;
+    for (var k = 0; k < imgs.length; k++) { setClasse(imgs[k], k === i ? 'on' : ''); setClasse(pts[k], k === i ? 'on' : ''); }
+    var t = sat.quadros[i];
+    if (!t) return;
+    setTxt($('sat-hora'), hhmm(t));
+    var ult = sat.quadros[sat.quadros.length - 1];
+    var atraso = Math.round((Date.now() - new Date(ult).getTime()) / MIN);
+    setTxt($('sat-selo'), (atraso > 180 ? '⚠ ' : '') + 'satélite GOES-East · NASA · imagem de ' + hhmm(ult) + ' (' + (atraso >= 60 ? Math.floor(atraso / 60) + 'h' + ('0' + atraso % 60).slice(-2) : atraso + ' min') + ' de atraso)');
+    // Atraso normal do GIBS é ~1h15; acima de 3 h o selo fica em alerta.
+    setClasse($('sat-selo'), 'selo' + (atraso > 180 ? ' velho' : ''));
+  }
+  // Anima só enquanto o slide está na tela; segura o quadro mais recente por mais tempo.
+  function animarSatelite(ligar) {
+    clearTimeout(sat.timer);
+    if (!ligar || !sat.quadros.length) return;
+    (function passo() {
+      sat.i = (sat.i + 1) % sat.quadros.length;
+      mostrarQuadro(sat.i);
+      sat.timer = setTimeout(passo, sat.i === sat.quadros.length - 1 ? 2500 : 700);
+    })();
+  }
+  function renderCidades() {
+    var lista = estado.cidades;
+    if (!lista || !lista.length) return;
+    var h = '<div class="cidade cab-c"><div class="nm"></div><div class="dd">hoje</div><div class="dd">amanhã</div></div>';
+    h += lista.map(function (r, k) {
+      var c = CIDADES[k], d = r.daily;
+      function dia(i) {
+        var w = wmo(d.weather_code[i], 1), pc = d.precipitation_probability_max[i];
+        return '<div class="dd num">' + svgIcone(w[0]) + Math.round(d.temperature_2m_max[i]) + '° <span>' + Math.round(d.temperature_2m_min[i]) + '°</span> <em>' + (pc == null ? '' : pc + '%') + '</em></div>';
+      }
+      return '<div class="cidade' + (c[3] ? ' dest' : '') + '"><div class="nm">' + c[0] + '</div>' + dia(0) + dia(1) + '</div>';
+    }).join('');
+    setHTML($('cidades'), h);
+    setTxt($('cid-selo'), 'máx · mín · chuva · ' + (estado.ok.cidades ? hhmm(estado.ok.cidades) : ''));
+  }
+
+  // ---------- notícias ----------
+  function quando(iso) {
+    var d = diaISO(iso), hoje = hojeISO();
+    if (d === hoje) return hhmm(iso);
+    var ontem = new Date(Date.now() - 864e5).toISOString();
+    return diaISO(ontem) === d ? 'ontem' : ddmm(iso);
+  }
+  function renderNoticias() {
+    var lista = (estado.dados && estado.dados.noticias) || [];
+    var el = $('noticias');
+    if (!lista.length) { setHTML(el, '<div class="vazio">Sem notícias no momento.</div>'); return; }
+    var h = lista.slice(0, 7).map(function (nt) {
+      return '<div class="noticia"><div class="quando"><div class="h num">' + quando(nt.data) + '</div><div class="f">' + esc(nt.fonte) + '</div></div>' +
+        '<div class="tit">' + esc(nt.titulo) + '</div></div>';
+    }).join('');
+    setHTML(el, h);
+    var g = estado.dados.geradoEm;
+    setTxt($('noticias-selo'), 'g1 Agro · Canal Rural' + (g ? ' · ' + hhmm(g) : ''));
+  }
+
+  // ---------- topo e rodapé ----------
+  var fmtData = new Intl.DateTimeFormat('pt-BR', { timeZone: FUSO, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  function renderRelogio() {
+    var agora = new Date();
+    setTxt($('relogio'), hhmm(agora));
+    setTxt($('data'), fmtData.format(agora));
+    var h = +sp(agora).hora;
+    setTxt($('saudacao'), h >= 5 && h < 12 ? 'Bom dia' : h >= 12 && h < 18 ? 'Boa tarde' : 'Boa noite');
+  }
+  function renderSinc() {
+    var ok = estado.ok.dados, el = $('sinc');
+    if (!ok) { setTxt($('sinc-txt'), 'aguardando dados…'); setClasse(el, 'sinc alerta'); return; }
+    var gerado = estado.dados && estado.dados.geradoEm;
+    if (Date.now() - new Date(ok).getTime() > 15 * MIN) { setTxt($('sinc-txt'), 'sem conexão desde ' + desde(ok)); setClasse(el, 'sinc alerta'); }
+    else if (gerado && Date.now() - new Date(gerado).getTime() > (emPregao() ? 90 : 300) * MIN) { setTxt($('sinc-txt'), 'coletor parado desde ' + desde(gerado)); setClasse(el, 'sinc alerta'); }
+    else { setTxt($('sinc-txt'), 'atualizado às ' + hhmm(gerado)); setClasse(el, 'sinc'); }
+  }
+  // Faixa fixa no rodapé: os números principais ficam sempre à vista, em qualquer slide.
+  function renderFaixa() {
+    var partes = [];
+    function add(rot, it, txt) { if (it) partes.push('<span>' + rot + ' <b>' + txt + '</b> ' + htmlVar(it.var && it.var.pct) + '</span>'); }
+    var a = item('soja_paranagua'); add('Soja', a, a && rs(a.valor));
+    var mi = item('milho_cepea'); add('Milho', mi, mi && rs(mi.valor));
+    var d = dolar(); add('Dólar', d, d && rs(d.valor, 3));
+    setHTML($('faixa'), partes.join(''));
+  }
+
+  // ---------- compatibilidade: WebView antigo (Chromium < 84) não tem "gap" em flexbox ----------
+  // Detecta e, se faltar, converte o gap de cada contêiner flex em margem nos filhos.
+  var semGapFlex = (function () {
+    var d = document.createElement('div');
+    d.style.cssText = 'display:flex;flex-direction:column;row-gap:1px;position:absolute;visibility:hidden';
+    d.appendChild(document.createElement('div')); d.appendChild(document.createElement('div'));
+    document.body.appendChild(d);
+    var falta = d.scrollHeight !== 1;
+    document.body.removeChild(d);
+    return falta;
+  })();
+  function gapFlex() {
+    if (!semGapFlex) return;
+    var els = document.getElementById('palco').getElementsByTagName('*');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (el.namespaceURI !== 'http://www.w3.org/1999/xhtml') continue;
+      var cs = getComputedStyle(el);
+      if (cs.display !== 'flex' && cs.display !== 'inline-flex') continue;
+      var col = cs.flexDirection.indexOf('column') === 0;
+      var g = parseFloat(col ? cs.rowGap : cs.columnGap);
+      if (!g) continue;
+      var primeiro = true;
+      for (var k = 0; k < el.children.length; k++) {
+        var f = el.children[k], fs = getComputedStyle(f);
+        if (fs.display === 'none' || fs.position === 'absolute') continue;
+        if (col) f.style.marginTop = primeiro ? '' : g + 'px';
+        else f.style.marginLeft = primeiro ? '' : g + 'px';
+        primeiro = false;
+      }
+    }
+  }
+
+  function renderTudo() {
+    // Cada bloco é isolado: um erro em um cartão não derruba os outros.
+    [renderRelogio, renderSinc, renderCartoes, renderDolar30, renderClimaMini, renderAlertas, renderTempoHoje, renderPrevisao, renderChuva, prepararSatelite, renderCidades, renderNoticias, renderFaixa]
+      .forEach(function (fn) { try { fn(); } catch (e) { if (window.console) console.error(e); } });
+    try { gapFlex(); } catch (e) { /* só estética */ }
+  }
+
+  // ---------- slides ----------
+  var slides = [].slice.call(document.querySelectorAll('.slide'));
+  var atual = -1, timerSlide = null, timerProg = null;
+  function montarAbas() {
+    $('abas').innerHTML = slides.map(function (s, i) {
+      return '<div class="aba" data-i="' + i + '">' + s.getAttribute('data-nome') + '<div class="prog"></div></div>';
+    }).join('');
+  }
+  function disponivel(s) { // pula o slide de notícias se não houver nenhuma
+    return s.id !== 's-noticias' || ((estado.dados && estado.dados.noticias) || []).length > 0;
+  }
+  function proximoSlide() {
+    var i = atual;
+    for (var k = 0; k < slides.length; k++) { i = (i + 1) % slides.length; if (disponivel(slides[i])) break; }
+    mostrar(i);
+  }
+  function mostrar(i) {
+    var seg = +(slides[i].getAttribute('data-seg') || CONFIG.segundosPorSlide);
+    slides.forEach(function (s, k) { setClasse(s, 'slide' + (k === i ? ' ativo' : '')); });
+    var abas = $('abas').children;
+    for (var k = 0; k < abas.length; k++) {
+      setClasse(abas[k], 'aba' + (k === i ? ' ativa' : ''));
+      var p = abas[k].firstElementChild;
+      p.style.transition = 'none';
+      p.style.transform = 'scaleX(0)';
+    }
+    // Barra de progresso da aba ativa em passos de 1 s (uma animação contínua faria o box
+    // redesenhar a tela 60 vezes por segundo e gastar CPU à toa).
+    var prog = abas[i].firstElementChild, inicio = Date.now();
+    clearInterval(timerProg);
+    timerProg = setInterval(function () {
+      var f = Math.min(1, (Date.now() - inicio) / (seg * 1000));
+      prog.style.transform = 'scaleX(' + f.toFixed(3) + ')';
+    }, 1000);
+    atual = i;
+    animarSatelite(slides[i].id === 's-nuvens');
+    clearTimeout(timerSlide);
+    timerSlide = setTimeout(proximoSlide, seg * 1000);
+  }
+
+  // ---------- busca ----------
+  function buscar(url, ms) {
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var t = setTimeout(function () { if (ctrl) ctrl.abort(); }, ms || 20000);
+    // Arquivos do próprio site levam ?t= para furar o cache do GitHub Pages.
+    if (!/^https?:/.test(url)) url += (url.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now();
+    return fetch(url, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) { clearTimeout(t); if (!r.ok) throw new Error('HTTP ' + r.status); return r; });
+  }
+
+  function atualizarDados() {
+    return buscar(CONFIG.dadosUrl).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.itens) throw new Error('data.json inválido');
+      estado.dados = j; estado.ok.dados = new Date().toISOString(); salvar();
+    }).catch(function () { /* mantém o último data.json salvo */ }).then(renderTudo);
+  }
+  function atualizarDolar() {
+    return buscar(CONFIG.dolarUrl).then(function (r) { return r.json(); }).then(function (j) {
+      var u = j.USDBRL;
+      estado.dolar = { valor: parseFloat(u.bid), data: new Date(+u.timestamp * 1000).toISOString(), var: { pct: parseFloat(u.pctChange), periodo: 'dia' } };
+      estado.ok.dolar = new Date().toISOString(); salvar();
+    }).catch(function () {}).then(renderTudo);
+  }
+  function atualizarDolarHist() {
+    return buscar(CONFIG.dolarHistUrl).then(function (r) { return r.json(); }).then(function (arr) {
+      estado.dolarHist = arr.map(function (d) { return [new Date(+d.timestamp * 1000).toISOString().slice(0, 10), parseFloat(d.bid)]; }).reverse();
+      salvar();
+    }).catch(function () {}).then(renderTudo);
+  }
+  function atualizarCidades() {
+    var url = CONFIG.cidadesUrl + '&latitude=' + CIDADES.map(function (c) { return c[1]; }).join(',') + '&longitude=' + CIDADES.map(function (c) { return c[2]; }).join(',');
+    return buscar(url).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j.length) throw new Error('cidades inválidas');
+      estado.cidades = j; estado.ok.cidades = new Date().toISOString(); salvar();
+    }).catch(function () {}).then(renderTudo);
+  }
+  function atualizarChuva() {
+    return buscar(CONFIG.chuvaUrl).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j.daily) throw new Error('chuva inválida');
+      estado.chuva = j; estado.ok.chuva = new Date().toISOString(); salvar();
+    }).catch(function () {}).then(renderTudo);
+  }
+  function atualizarClima() {
+    return buscar(CONFIG.climaUrl).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j.current || !j.hourly) throw new Error('clima inválido');
+      estado.clima = j; estado.ok.clima = new Date().toISOString(); salvar();
+    }).catch(function () {}).then(renderTudo);
+  }
+
+  // Recarrega só quando o painel foi republicado e a rede está boa (nunca troca o painel por uma tela de erro).
+  var versaoAtual = null;
+  function verificarVersao() {
+    buscar(CONFIG.versaoUrl, 10000).then(function (r) { return r.text(); }).then(function (v) {
+      v = v.trim();
+      if (versaoAtual === null) versaoAtual = v;
+      else if (v && v !== versaoAtual) location.reload();
+    }).catch(function () {});
+  }
+  // Recarga diária de manutenção às 04:30 (libera memória do WebView), só se a rede estiver ok.
+  function manutencaoDiaria() {
+    var p = sp(new Date());
+    if (p.hora === '04' && p.min === '30') buscar(CONFIG.versaoUrl, 10000).then(function () { location.reload(); }).catch(function () {});
+  }
+
+  // ---------- escala e proteção de tela ----------
+  var DESLOC = [[0, 0], [4, 2], [-3, 4], [-4, -2], [3, -4], [-2, 0]];
+  var passo = 0;
+  // suave=true só no deslocamento anti-marca; ao carregar/redimensionar o ajuste é instantâneo.
+  function encaixar(suave) {
+    $('palco').style.transition = suave === true ? 'transform 2s linear' : 'none';
+    // clientWidth é a área visível real; WebViews antigos inflam innerWidth com o palco de 1920 px.
+    var W = document.documentElement.clientWidth || window.innerWidth, H = document.documentElement.clientHeight || window.innerHeight;
+    var s = Math.min(W / 1920, H / 1080);
+    var x = (W - 1920 * s) / 2 + DESLOC[passo][0] * s;
+    var y = (H - 1080 * s) / 2 + DESLOC[passo][1] * s;
+    $('palco').style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) scale(' + s + ')';
+  }
+  window.addEventListener('resize', encaixar);
+
+  // ?debug=1 mostra as medidas da tela (para ajustar o encaixe em TVs/boxes).
+  if (/[?&]debug=1/.test(location.search)) {
+    var dbg = document.createElement('div');
+    dbg.style.cssText = 'position:fixed;left:0;top:0;z-index:9;background:#000;color:#ff0;font:24px monospace;padding:8px';
+    document.body.appendChild(dbg);
+    setInterval(function () {
+      dbg.textContent = 'inner ' + window.innerWidth + 'x' + window.innerHeight + ' client ' + document.documentElement.clientWidth + 'x' + document.documentElement.clientHeight +
+        ' screen ' + screen.width + 'x' + screen.height + ' dpr ' + window.devicePixelRatio + ' gapflex ' + !semGapFlex + ' ' + $('palco').style.transform;
+    }, 1000);
+  }
+
+  // Nome na saudação vem do endereço (?nome=Fulano), para não ficar no código público.
+  var nomeUrl = /[?&]nome=([^&]+)/.exec(location.search);
+  if (nomeUrl) { try { localStorage.setItem('painelAgro.nome', decodeURIComponent(nomeUrl[1])); } catch (e) {} }
+  var nome = nomeUrl ? decodeURIComponent(nomeUrl[1]) : (function () { try { return localStorage.getItem('painelAgro.nome'); } catch (e) { return null; } })();
+  if (nome) $('nome').textContent = ', ' + nome.replace(/\+/g, ' ');
+
+  // ---------- início ----------
+  // ?slide=3 fixa um slide (útil para testar no PC).
+  var fixo = /[?&]slide=(\d+)/.exec(location.search);
+  prepararIcones();
+  desenharCidades();
+  montarAbas();
+  encaixar();
+  renderTudo();
+  if (fixo) { mostrar(Math.min(+fixo[1] - 1, slides.length - 1)); clearTimeout(timerSlide); }
+  else mostrar(0);
+  atualizarDados(); atualizarDolar(); atualizarDolarHist(); atualizarClima(); atualizarChuva(); atualizarCidades(); verificarVersao();
+  setInterval(atualizarDados, INTERVALO.dados);
+  setInterval(atualizarDolar, INTERVALO.dolar);
+  setInterval(atualizarDolarHist, INTERVALO.dolarHist);
+  setInterval(atualizarClima, INTERVALO.clima);
+  setInterval(atualizarChuva, INTERVALO.chuva);
+  setInterval(atualizarCidades, INTERVALO.chuva);
+  setInterval(verificarVersao, INTERVALO.versao);
+  setInterval(function () { renderRelogio(); renderSinc(); manutencaoDiaria(); }, 20 * 1000);
+  setInterval(renderTudo, 5 * MIN); // reavalia selos "ao vivo/fechamento" e avisos de desatualizado
+  setInterval(function () { passo = (passo + 1) % DESLOC.length; encaixar(true); }, 3 * MIN);
+  window.addEventListener('online', function () { atualizarDados(); atualizarDolar(); atualizarClima(); atualizarChuva(); });
+
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  }
+})();
+</script>
+</body>
+</html>

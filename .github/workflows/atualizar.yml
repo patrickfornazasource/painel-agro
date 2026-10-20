@@ -1,0 +1,74 @@
+name: Atualizar cotações
+
+on:
+  schedule:
+    # Horários em UTC (Brasília = UTC−3).
+    - cron: '*/15 9-23 * * 1-5'   # seg–sex, 06h–20h45 de Brasília: a cada 15 min
+    - cron: '0 */3 * * *'         # demais horários e fim de semana: a cada 3 h
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  coletar-e-publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar coletor
+        working-directory: coletor
+        run: npm install --no-audit --no-fund
+
+      - name: Montar site
+        run: |
+          mkdir -p _site
+          cp index.html sw.js _site/
+          # Versão do painel = hash do index.html; quando muda, a TV recarrega sozinha.
+          sha1sum index.html | cut -c1-12 > _site/versao.txt
+
+      - name: Coletar cotações
+        working-directory: coletor
+        # O data.json anterior (já publicado) guarda o histórico e os últimos valores bons.
+        run: node coletar.mjs --out ../_site/data.json --prev "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data.json"
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+  # O GitHub desliga agendamentos de repositórios sem commits há 60 dias.
+  # Este passo faz um commit vazio no dia 1º de cada mês para manter o agendamento vivo.
+  manter-ativo:
+    if: github.event_name == 'schedule' && github.event.schedule == '0 */3 * * *'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Commit mensal
+        run: |
+          if [ "$(date -u +%d)" = "01" ] && [ "$(date -u +%H)" = "12" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "Manter agendamento ativo"
+            git push
+          fi
