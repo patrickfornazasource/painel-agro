@@ -88,6 +88,7 @@ function varPeloHist(hist, data) {
 
 // CEPEA/ESALQ: cada página tem uma ou mais tabelas, cada uma precedida pelo título do indicador.
 async function cepea(slug) {
+  if (process.env.SIMULAR_BLOQUEIO_CEPEA) throw new Error('bloqueio simulado');
   const html = await baixar(`https://www.cepea.org.br/br/indicador/${slug}.aspx`);
   const tabelas = [];
   const re = /<table[\s\S]*?<\/table>/gi;
@@ -105,6 +106,43 @@ async function cepea(slug) {
   return tabelas;
 }
 
+// Reserva: o CEPEA bloqueia acessos vindos de datacenters (como os servidores do GitHub).
+// O Notícias Agrícolas republica os mesmos indicadores, uma tabela por dia.
+const CEPEA_NA = {
+  'soja:PARANAGUÁ': 'soja/soja-indicador-cepea-esalq-porto-paranagua',
+  'soja:PARANÁ': 'soja/indicador-cepea-esalq-soja-parana',
+  'milho:': 'milho/indicador-cepea-esalq-milho',
+  'trigo:PARANÁ': 'trigo/preco-medio-do-trigo-cepea-esalq',
+};
+async function cepeaViaNA(slug, chave) {
+  const caminho = CEPEA_NA[`${slug}:${chave}`];
+  if (!caminho) throw new Error(`sem reserva para ${slug} ${chave}`);
+  const html = await baixar(`https://www.noticiasagricolas.com.br/cotacoes/${caminho}`);
+  const linhas = [];
+  for (const m of html.matchAll(/<table class="cot-fisicas"[\s\S]*?<\/table>/gi)) {
+    for (const l of linhasTabela(m[0])) {
+      if (!dataBR(l[0]) || numBR(l[l.length >= 4 ? 2 : 1]) == null) continue;
+      // Trigo traz uma linha por região: Data | Região | R$/t | Variação.
+      if (l.length >= 4) { if (!/paran/i.test(l[1])) continue; linhas.push({ data: dataBR(l[0]), valor: numBR(l[2]), varDia: numBR(l[3]), varMes: null }); }
+      else linhas.push({ data: dataBR(l[0]), valor: numBR(l[1]), varDia: numBR(l[2]), varMes: null });
+    }
+  }
+  if (!linhas.length) throw new Error(`Notícias Agrícolas ${caminho}: sem dados`);
+  linhas.sort((a, b) => (a.data < b.data ? 1 : -1));
+  return { titulo: chave, linhas, fonte: 'CEPEA/ESALQ via Notícias Agrícolas' };
+}
+
+// Tenta o CEPEA; se falhar, usa a reserva. chave '' = primeira tabela da página.
+async function indicadorCepea(slug, chave) {
+  try {
+    const t = await cepea(slug);
+    return chave ? acharTabela(t, chave) : t[0];
+  } catch (e) {
+    console.error(`  CEPEA ${slug} indisponível (${e.message}); usando Notícias Agrícolas`);
+    return cepeaViaNA(slug, chave);
+  }
+}
+
 function itemCepea(tabela, extra) {
   const [ult] = tabela.linhas;
   return {
@@ -113,7 +151,7 @@ function itemCepea(tabela, extra) {
     var: { pct: ult.varDia, periodo: 'dia' },
     varMes: ult.varMes,
     freq: 'diario',
-    fonte: 'CEPEA/ESALQ',
+    fonte: tabela.fonte || 'CEPEA/ESALQ',
     hist: tabela.linhas.map((l) => [l.data, l.valor]).reverse(),
     ...extra,
   };
@@ -257,9 +295,11 @@ async function bancoMundial() {
 
 // AwesomeAPI — dólar comercial (o painel também consulta direto do navegador; isto é a reserva).
 async function dolar() {
+  // O histórico é opcional: a AwesomeAPI limita servidores compartilhados (HTTP 429) e o painel
+  // também busca o dólar direto da TV.
   const [ult, dias] = await Promise.all([
     baixarJson('https://economia.awesomeapi.com.br/json/last/USD-BRL'),
-    baixarJson('https://economia.awesomeapi.com.br/json/daily/USD-BRL/30'),
+    baixarJson('https://economia.awesomeapi.com.br/json/daily/USD-BRL/30').catch(() => []),
   ]);
   const u = ult.USDBRL;
   const hist = dias.map((d) => [new Date(d.timestamp * 1000).toISOString().slice(0, 10), parseFloat(d.bid)]).reverse();
@@ -375,14 +415,14 @@ async function main() {
   // Cada tarefa devolve { id: item } ou lança erro; os ids listados ficam com o valor antigo em caso de falha.
   const tarefas = [
     [['soja_paranagua', 'soja_parana'], async () => {
-      const t = await cepea('soja');
+      const [porto, interior] = await Promise.all([indicadorCepea('soja', 'PARANAGUÁ'), indicadorCepea('soja', 'PARANÁ')]);
       return {
-        soja_paranagua: itemCepea(acharTabela(t, 'PARANAGUÁ'), { nome: 'Soja Paranaguá', unidade: 'R$/sc' }),
-        soja_parana: itemCepea(acharTabela(t, 'PARANÁ'), { nome: 'Soja Paraná', unidade: 'R$/sc' }),
+        soja_paranagua: itemCepea(porto, { nome: 'Soja Paranaguá', unidade: 'R$/sc' }),
+        soja_parana: itemCepea(interior, { nome: 'Soja Paraná', unidade: 'R$/sc' }),
       };
     }],
-    [['milho_cepea'], async () => ({ milho_cepea: itemCepea((await cepea('milho'))[0], { nome: 'Milho Campinas', unidade: 'R$/sc' }) })],
-    [['trigo_cepea'], async () => ({ trigo_cepea: itemCepea(acharTabela(await cepea('trigo'), 'PARANÁ'), { nome: 'Trigo Paraná', unidade: 'R$/t' }) })],
+    [['milho_cepea'], async () => ({ milho_cepea: itemCepea(await indicadorCepea('milho', ''), { nome: 'Milho Campinas', unidade: 'R$/sc' }) })],
+    [['trigo_cepea'], async () => ({ trigo_cepea: itemCepea(await indicadorCepea('trigo', 'PARANÁ'), { nome: 'Trigo Paraná', unidade: 'R$/t' }) })],
     [['soja_cbot'], async () => ({ soja_cbot: await cbot('ZS=F', { nome: 'Soja Chicago', unidade: 'US$/bu' }) })],
     [['milho_cbot'], async () => ({ milho_cbot: await cbot('ZC=F', { nome: 'Milho Chicago', unidade: 'US$/bu' }) })],
     [['trigo_cbot'], async () => ({ trigo_cbot: await cbot('ZW=F', { nome: 'Trigo Chicago', unidade: 'US$/bu' }) })],
