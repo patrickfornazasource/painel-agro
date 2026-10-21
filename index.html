@@ -118,6 +118,7 @@
   .cidade .dd span { color: var(--muted); }
   .cidade .dd em { font-style: normal; color: var(--rain); font-size: 21px; }
   .leg-sat { font-size: 21px; color: var(--text-2); line-height: 1.4; }
+  .aviso-sat { margin-top: 12px; color: var(--warn); }
   .coluna { display: flex; flex-direction: column; gap: 18px; min-height: 0; min-width: 0; }
   #s-noticias { grid-template-columns: 1fr; }
 
@@ -260,6 +261,7 @@
 </style>
 </head>
 <body>
+<div id="apagao" style="display:none;position:fixed;inset:0;background:#000;z-index:99"></div>
 <div id="palco">
   <header>
     <div class="marca">
@@ -323,7 +325,8 @@
           <div class="cidades" id="cidades"></div>
         </div>
         <div class="card" style="flex:0 0 auto">
-          <div class="leg-sat">De dia, a imagem mostra as cores reais: <b>nuvens brancas e grossas</b> costumam trazer chuva. À noite vira infravermelho: quanto <b>mais brilhante</b> a nuvem, mais alta e fria, sinal de temporal. Animação das últimas 2 horas.</div>
+          <div class="leg-sat" id="sat-leg">De dia, a imagem mostra as cores reais: <b>nuvens brancas e grossas</b> costumam trazer chuva. À noite vira infravermelho: quanto <b>mais brilhante</b> a nuvem, mais alta e fria, sinal de temporal. Animação das últimas 2 horas.</div>
+          <div class="leg-sat aviso-sat" id="sat-aviso" style="display:none"></div>
         </div>
       </div>
     </section>
@@ -511,6 +514,7 @@
       '&STYLES=&CRS=EPSG:4326&BBOX=-27.4,-55.6,-21.9,-47.6&WIDTH=1100&HEIGHT=760&FORMAT=image/jpeg',
     chuvaUrl: 'https://api.open-meteo.com/v1/forecast?latitude=-23.4253&longitude=-51.9386' +
       '&daily=precipitation_sum&timezone=America%2FSao_Paulo&past_days=30&forecast_days=14',
+    telaLigada: ['07:00', '07:15'],            // a tela só mostra o painel nessa janela (horário de Brasília); fora dela fica preta. ?sempre=1 desliga a regra
     segundosPorSlide: 45                       // cada slide pode ter o seu em data-seg="…"
   };
   var MIN = 60 * 1000;
@@ -1058,6 +1062,13 @@
     var chave = s.quadros.join(',');
     if (chave === sat.chave) return;
     sat.chave = chave; sat.quadros = s.quadros; sat.i = s.quadros.length - 1;
+    // Infravermelho (reserva quando o GeoColor trava na origem): explica a imagem e avisa o motivo.
+    var ir = /Band13/.test(s.camada || '');
+    $('sat-leg').innerHTML = ir
+      ? 'Imagem de infravermelho: quanto <b>mais brilhante e fria</b> a nuvem, mais alta ela é, sinal de <b>temporal</b>. Animação das últimas 2 horas.'
+      : 'De dia, a imagem mostra as cores reais: <b>nuvens brancas e grossas</b> costumam trazer chuva. À noite vira infravermelho: quanto <b>mais brilhante</b> a nuvem, mais alta e fria, sinal de temporal. Animação das últimas 2 horas.';
+    $('sat-aviso').style.display = s.aviso ? '' : 'none';
+    $('sat-aviso').textContent = s.aviso ? '⚠ ' + s.aviso : '';
     // Pré-carrega os quadros; a troca entre eles é só visibilidade (leve para o box).
     $('mapa-imgs').innerHTML = s.quadros.map(function (t, k) {
       return '<img alt="" ' + (k === sat.i ? 'class="on" ' : '') + 'src="' + CONFIG.satUrl + '&LAYERS=' + s.camada + '&TIME=' + t + '">';
@@ -1227,7 +1238,7 @@
       prog.style.transform = 'scaleX(' + f.toFixed(3) + ')';
     }, 1000);
     atual = i;
-    animarSatelite(slides[i].id === 's-nuvens');
+    animarSatelite(dentroDaJanela() && slides[i].id === 's-nuvens');
     clearTimeout(timerSlide);
     timerSlide = setTimeout(proximoSlide, seg * 1000);
   }
@@ -1296,6 +1307,21 @@
     if (p.hora === '04' && p.min === '30') buscar(CONFIG.versaoUrl, 10000).then(function () { location.reload(); }).catch(function () {});
   }
 
+  // ---------- janela de tela ligada ----------
+  // Fora da janela (CONFIG.telaLigada) a tela fica preta. A TV continua ligada; para desligá-la de verdade,
+  // use o agendador de tela do Fully Kiosk.
+  function minutosDoDia(hhmm) { var a = hhmm.split(':'); return +a[0] * 60 + +a[1]; }
+  function dentroDaJanela() {
+    if (/[?&]sempre=1/.test(location.search) || !CONFIG.telaLigada) return true;
+    var p = sp(new Date()), agora = +p.hora * 60 + +p.min;
+    return agora >= minutosDoDia(CONFIG.telaLigada[0]) && agora < minutosDoDia(CONFIG.telaLigada[1]);
+  }
+  function aplicarJanela() {
+    var ligada = dentroDaJanela();
+    $('apagao').style.display = ligada ? 'none' : 'block';
+    animarSatelite(ligada && slides[atual] && slides[atual].id === 's-nuvens');
+  }
+
   // ---------- escala e proteção de tela ----------
   var DESLOC = [[0, 0], [4, 2], [-3, 4], [-4, -2], [3, -4], [-2, 0]];
   var passo = 0;
@@ -1339,6 +1365,7 @@
   if (fixo) { mostrar(Math.min(+fixo[1] - 1, slides.length - 1)); clearTimeout(timerSlide); }
   else mostrar(0);
   atualizarDados(); atualizarDolar(); atualizarDolarHist(); atualizarClima(); atualizarChuva(); atualizarCidades(); verificarVersao();
+  aplicarJanela(); setInterval(aplicarJanela, 10000);
   setInterval(atualizarDados, INTERVALO.dados);
   setInterval(atualizarDolar, INTERVALO.dolar);
   setInterval(atualizarDolarHist, INTERVALO.dolarHist);

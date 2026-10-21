@@ -25,6 +25,16 @@ A ordem é a das `<section class="slide">` no `index.html`: para mudar, basta mo
 O tempo de cada slide fica no atributo `data-seg="…"` da `<section>` correspondente. O padrão é `segundosPorSlide` no topo do script.
 O topo (relógio, clima e alerta) e o rodapé (soja, milho e dólar) ficam visíveis em todos os slides.
 
+## Tela ligada só das 07:00 às 07:15
+
+`CONFIG.telaLigada` no `index.html` define a janela (horário de Brasília). Fora dela a tela fica preta; a TV segue ligada.
+`?sempre=1` na URL ignora a regra (para testar). Para a TV desligar de verdade, use o agendador de tela do Fully Kiosk.
+
+## Satélite parado
+
+A imagem em cores reais (GeoColor) às vezes para na origem por horas (NASA e NOAA juntas). Quando isso acontece o coletor
+troca sozinho para o infravermelho (banda 13) e o painel mostra um aviso laranja ao lado do mapa.
+
 ## Publicar de graça (GitHub Pages)
 
 1. Crie uma conta em <https://github.com> (se ainda não tiver).

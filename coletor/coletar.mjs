@@ -376,21 +376,31 @@ async function alertasInmet() {
   return lista.filter((a) => { const k = a.evento + a.inicio + a.fim; if (vistos.has(k)) return false; vistos.add(k); return true; });
 }
 
-// Satélite GOES-East (NASA GIBS, imagem GeoColor): descobre o quadro mais recente já publicado
+// Satélite GOES-East (NASA GIBS): descobre o quadro mais recente já publicado
 // (o GIBS publica com ~1 h de atraso; quadros ainda não processados vêm em branco, com poucos bytes).
+// A camada GeoColor (cores reais) às vezes trava na origem por horas (NASA e NOAA juntas); nesse caso
+// cai para o infravermelho (banda 13), que sai de outro processamento e segue atualizado.
 const GIBS = 'https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0' +
-  '&LAYERS=GOES-East_ABI_GeoColor&STYLES=&CRS=EPSG:4326&BBOX=-27.4,-55.6,-21.9,-47.6&FORMAT=image/jpeg';
+  '&STYLES=&CRS=EPSG:4326&BBOX=-27.4,-55.6,-21.9,-47.6&FORMAT=image/jpeg';
+const CAMADAS_SAT = ['GOES-East_ABI_GeoColor', 'GOES-East_ABI_Band13_Clean_Infrared'];
 async function satelite() {
   const passo = 10 * 60 * 1000;
-  let t = Math.floor((Date.now() - 40 * 60 * 1000) / passo) * passo;
-  for (let i = 0; i < 18; i++, t -= passo) {
-    const iso = new Date(t).toISOString().slice(0, 19) + 'Z';
-    const img = await baixar(`${GIBS}&WIDTH=220&HEIGHT=152&TIME=${iso}`, { binario: true, tentativas: 1 });
-    if (img.length > 3000) {
-      // 7 quadros de 20 em 20 min: 2 horas de movimento das nuvens.
-      const quadros = [];
-      for (let k = 6; k >= 0; k--) quadros.push(new Date(t - k * 2 * passo).toISOString().slice(0, 19) + 'Z');
-      return { camada: 'GOES-East_ABI_GeoColor', quadros };
+  for (const camada of CAMADAS_SAT) {
+    let t = Math.floor((Date.now() - 40 * 60 * 1000) / passo) * passo;
+    for (let i = 0; i < 18; i++, t -= passo) {
+      const iso = new Date(t).toISOString().slice(0, 19) + 'Z';
+      const img = await baixar(`${GIBS}&LAYERS=${camada}&WIDTH=220&HEIGHT=152&TIME=${iso}`, { binario: true, tentativas: 1 });
+      if (img.length > 3000) {
+        // 7 quadros de 20 em 20 min: 2 horas de movimento das nuvens.
+        const quadros = [];
+        for (let k = 6; k >= 0; k--) quadros.push(new Date(t - k * 2 * passo).toISOString().slice(0, 19) + 'Z');
+        const r = { camada, quadros };
+        if (camada !== CAMADAS_SAT[0]) {
+          r.aviso = 'A imagem em cores reais (GeoColor) está parada na origem (NASA/NOAA). Mostrando o infravermelho, que segue atualizado.';
+          console.error(`⚠ satélite: GeoColor sem quadros novos; usando ${camada}`);
+        }
+        return r;
+      }
     }
   }
   throw new Error('nenhum quadro de satélite disponível');
