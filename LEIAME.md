@@ -25,10 +25,10 @@ A ordem é a das `<section class="slide">` no `index.html`: para mudar, basta mo
 O tempo de cada slide fica no atributo `data-seg="…"` da `<section>` correspondente. O padrão é `segundosPorSlide` no topo do script.
 O topo (relógio, clima e alerta) e o rodapé (soja, milho e dólar) ficam visíveis em todos os slides.
 
-## Tela ligada só das 07:00 às 07:15
+## Horário da TV
 
-`CONFIG.telaLigada` no `index.html` define a janela (horário de Brasília). Fora dela a tela fica preta; a TV segue ligada.
-`?sempre=1` na URL ignora a regra (para testar). Para a TV desligar de verdade, use o agendador de tela do Fully Kiosk.
+O painel fica sempre visível. Quem liga e desliga é o timer da própria TV LG (liga às 07:00 no HDMI 1, desliga às 07:15).
+Para o painel apagar sozinho fora de um horário, preencha `CONFIG.telaLigada` no `index.html` (ex. `['07:00', '07:15']`, horário de Brasília); fora da janela a tela fica preta. `?sempre=1` na URL ignora a regra.
 
 ## Satélite parado
 

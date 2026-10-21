@@ -514,7 +514,7 @@
       '&STYLES=&CRS=EPSG:4326&BBOX=-27.4,-55.6,-21.9,-47.6&WIDTH=1100&HEIGHT=760&FORMAT=image/jpeg',
     chuvaUrl: 'https://api.open-meteo.com/v1/forecast?latitude=-23.4253&longitude=-51.9386' +
       '&daily=precipitation_sum&timezone=America%2FSao_Paulo&past_days=30&forecast_days=14',
-    telaLigada: ['07:00', '07:15'],            // a tela só mostra o painel nessa janela (horário de Brasília); fora dela fica preta. ?sempre=1 desliga a regra
+    telaLigada: null,                          // ex. ['07:00', '07:15']: a tela só mostra o painel nessa janela (horário de Brasília); fora dela fica preta. null = sempre ligada
     segundosPorSlide: 45                       // cada slide pode ter o seu em data-seg="…"
   };
   var MIN = 60 * 1000;
