@@ -13,13 +13,13 @@ coletor/coletar.mjs   busca as fontes e gera o data.json
 
 | # | Slide | Tempo |
 |---|---|---|
-| 1 | Previsão 7 dias + chuva (30 dias atrás e 14 à frente) | 20 s |
-| 2 | Nuvens sobre o Paraná (satélite animado) + cidades | 10 s |
-| 3 | Tempo hoje: agora, alertas, próximas 24 h, janela de pulverização | 30 s |
-| 4 | Soja: Paranaguá, Paraná, Maringá, Chicago, B3 | 20 s |
-| 5 | Dólar + soja e milho de Chicago convertidos em reais | 10 s |
-| 6 | Insumos: diesel S10, ureia, DAP, KCl | 20 s |
-| 7 | Notícias do agro | 30 s |
+| 1 | Previsão 7 dias + chuva (30 dias atrás e 14 à frente) | 45 s |
+| 2 | Nuvens sobre o Paraná (satélite animado) + cidades | 45 s |
+| 3 | Tempo hoje: agora, alertas, próximas 24 h, janela de pulverização | 45 s |
+| 4 | Soja: Paranaguá, Paraná, Maringá, Chicago, B3 | 45 s |
+| 5 | Dólar + soja e milho de Chicago convertidos em reais | 45 s |
+| 6 | Insumos: diesel S10, ureia, DAP, KCl | 45 s |
+| 7 | Notícias do agro | 45 s |
 
 A ordem é a das `<section class="slide">` no `index.html`: para mudar, basta mover o bloco inteiro.
 O tempo de cada slide fica no atributo `data-seg="…"` da `<section>` correspondente. O padrão é `segundosPorSlide` no topo do script.

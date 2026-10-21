@@ -287,7 +287,7 @@
 
   <div id="slides">
     <!-- 1. PREVISÃO E CHUVA -->
-    <section class="slide" id="s-tempo" data-nome="Previsão e chuva" data-seg="20">
+    <section class="slide" id="s-tempo" data-nome="Previsão e chuva" data-seg="45">
       <div class="card">
         <div class="cab"><svg viewBox="0 0 24 24" data-icone="chuva"></svg><h2>Previsão · próximos 7 dias</h2><span class="selo" id="prev-selo">Open-Meteo</span></div>
         <div class="dias7" id="tempo-dias"></div>
@@ -307,7 +307,7 @@
     </section>
 
     <!-- 2. NUVENS -->
-    <section class="slide" id="s-nuvens" data-nome="Nuvens" data-seg="10">
+    <section class="slide" id="s-nuvens" data-nome="Nuvens" data-seg="45">
       <div class="card">
         <div class="cab"><svg viewBox="0 0 24 24" data-icone="nublado"></svg><h2>Nuvens sobre o Paraná</h2><span class="selo" id="sat-selo">satélite GOES-East</span></div>
         <div class="mapa" id="mapa">
@@ -329,7 +329,7 @@
     </section>
 
     <!-- 3. TEMPO HOJE -->
-    <section class="slide" id="s-tempo-hoje" data-nome="Tempo hoje" data-seg="30">
+    <section class="slide" id="s-tempo-hoje" data-nome="Tempo hoje" data-seg="45">
       <div class="card">
         <div class="cab"><svg viewBox="0 0 24 24" data-icone="local"></svg><h2>Agora · Maringá</h2><span class="selo" id="tempo-selo">Open-Meteo</span></div>
         <div class="agora"><svg id="tempo-icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></svg><div class="t num" id="tempo-temp">—</div></div>
@@ -363,7 +363,7 @@
     </section>
 
     <!-- 4. SOJA -->
-    <section class="slide" id="s-soja" data-nome="Soja" data-seg="20">
+    <section class="slide" id="s-soja" data-nome="Soja" data-seg="45">
       <div class="card grande" data-item="soja_paranagua">
         <div class="cab"><svg viewBox="0 0 24 24" data-icone="soja"></svg><h2>Soja · Paranaguá</h2><span class="selo"></span></div>
         <div class="rot">Indicador CEPEA/ESALQ · porto · saca de 60 kg</div>
@@ -405,7 +405,7 @@
     </section>
 
     <!-- 5. DÓLAR -->
-    <section class="slide" id="s-dolar" data-nome="Dólar" data-seg="10">
+    <section class="slide" id="s-dolar" data-nome="Dólar" data-seg="45">
       <div class="card grande" data-item="usd">
         <div class="cab"><svg viewBox="0 0 24 24" data-icone="dolar"></svg><h2>Dólar comercial</h2><span class="selo"></span></div>
         <div class="rot">Venda · R$ por US$ 1</div>
@@ -436,7 +436,7 @@
     </section>
 
     <!-- 6. INSUMOS -->
-    <section class="slide" id="s-insumos" data-nome="Insumos" data-seg="20">
+    <section class="slide" id="s-insumos" data-nome="Insumos" data-seg="45">
       <div class="card peq" data-item="diesel_pr">
         <div class="cab"><svg viewBox="0 0 24 24" data-icone="diesel"></svg><h2>Diesel S10</h2><span class="selo"></span></div>
         <div class="rot">Média do Paraná · R$/litro</div>
@@ -476,7 +476,7 @@
     </section>
 
     <!-- 7. NOTÍCIAS -->
-    <section class="slide" id="s-noticias" data-nome="Notícias" data-seg="30">
+    <section class="slide" id="s-noticias" data-nome="Notícias" data-seg="45">
       <div class="card">
         <div class="cab"><svg viewBox="0 0 24 24" data-icone="jornal"></svg><h2>Notícias do agro</h2><span class="selo" id="noticias-selo">g1 Agro · Canal Rural</span></div>
         <div class="lista" id="noticias"></div>
@@ -511,7 +511,7 @@
       '&STYLES=&CRS=EPSG:4326&BBOX=-27.4,-55.6,-21.9,-47.6&WIDTH=1100&HEIGHT=760&FORMAT=image/jpeg',
     chuvaUrl: 'https://api.open-meteo.com/v1/forecast?latitude=-23.4253&longitude=-51.9386' +
       '&daily=precipitation_sum&timezone=America%2FSao_Paulo&past_days=30&forecast_days=14',
-    segundosPorSlide: 30                       // cada slide pode ter o seu em data-seg="…"
+    segundosPorSlide: 45                       // cada slide pode ter o seu em data-seg="…"
   };
   var MIN = 60 * 1000;
   var INTERVALO = { dados: 5 * MIN, dolar: 5 * MIN, dolarHist: 60 * MIN, clima: 20 * MIN, chuva: 60 * MIN, versao: 60 * MIN };
