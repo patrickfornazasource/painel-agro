@@ -617,7 +617,7 @@
   }
 
   // ---------- frescor dos dados ----------
-  // Horário de pregão aproximado (seg–sex, 06h–21h de Brasília): fora dele o coletor roda a cada 3 h.
+  // Horário de pregão aproximado (seg–sex, 06h–21h de Brasília).
   function emPregao() {
     var p = sp(new Date()), dow = new Date(p.ano + '-' + p.mes + '-' + p.dia + 'T12:00:00Z').getUTCDay();
     return dow >= 1 && dow <= 5 && +p.hora >= 6 && +p.hora < 21;
@@ -629,7 +629,8 @@
     // (uma queda passageira do site não muda o fato de o valor ainda ser o último publicado).
     if (item.erroDesde && (item.freq === 'live' || Date.now() - new Date(item.erroDesde).getTime() > 6 * 60 * MIN)) return item.coletadoEm || item.erroDesde;
     var col = item.coletadoEm ? new Date(item.coletadoEm).getTime() : 0;
-    var lim = item.freq === 'live' ? (emPregao() ? 60 : 300) * MIN : 26 * 60 * MIN;
+    // O coletor roda de hora em hora (e o GitHub às vezes atrasa): cotação ao vivo só fica velha após 2 h.
+    var lim = item.freq === 'live' ? (emPregao() ? 120 : 300) * MIN : 26 * 60 * MIN;
     return col && Date.now() - col > lim ? item.coletadoEm : null;
   }
   function aoVivo(item) { return item.freq === 'live' && diaISO(item.data) === hojeISO() && emPregao() && !velhoDesde(item); }

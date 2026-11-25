@@ -48,7 +48,8 @@ troca sozinho para o infravermelho (banda 13) e o painel mostra um aviso laranja
 5. Aba **Actions** → **Atualizar cotações** → **Run workflow**. Em 1 ou 2 minutos o site fica no ar.
 6. Endereço fixo: `https://SEU-USUARIO.github.io/painel-agro/`. No Fully Kiosk use `https://SEU-USUARIO.github.io/painel-agro/?nome=SeuNome`. O nome da saudação vem do endereço e não fica no código público.
 
-O coletor roda sozinho a cada 15 min (seg–sex, 06h–21h) e a cada 3 h no resto do tempo.
+O coletor roda sozinho a cada 5 min das 07h às 08h (horário em que a TV fica ligada) e 1 vez por hora no resto do dia, todos os dias.
+O GitHub pode atrasar alguns minutos (ou pular) execuções agendadas em horários de pico; isso é normal.
 Uma vez por mês ele faz um commit vazio, porque o GitHub desliga agendamentos de repositórios parados há 60 dias.
 Quando o `index.html` muda, a TV recarrega sozinha em até 1 h.
 

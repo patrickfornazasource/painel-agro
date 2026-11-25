@@ -2,9 +2,9 @@ name: Atualizar cotações
 
 on:
   schedule:
-    # Horários em UTC (Brasília = UTC−3).
-    - cron: '*/15 9-23 * * 1-5'   # seg–sex, 06h–20h45 de Brasília: a cada 15 min
-    - cron: '0 */3 * * *'         # demais horários e fim de semana: a cada 3 h
+    # Horários em UTC (Brasília = UTC−3). Todos os dias.
+    - cron: '*/5 10 * * *'          # 07h00–07h55 de Brasília (quando a TV está ligada): a cada 5 min
+    - cron: '0 0-9,11-23 * * *'     # resto do dia: 1 vez por hora
   push:
     branches: [main]
   workflow_dispatch:
@@ -26,9 +26,9 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
 
@@ -48,22 +48,22 @@ jobs:
         # O data.json anterior (já publicado) guarda o histórico e os últimos valores bons.
         run: node coletar.mjs --out ../_site/data.json --prev "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data.json"
 
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
       - id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
   # O GitHub desliga agendamentos de repositórios sem commits há 60 dias.
   # Este passo faz um commit vazio no dia 1º de cada mês para manter o agendamento vivo.
   manter-ativo:
-    if: github.event_name == 'schedule' && github.event.schedule == '0 */3 * * *'
+    if: github.event_name == 'schedule' && github.event.schedule == '0 0-9,11-23 * * *'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Commit mensal
         run: |
           if [ "$(date -u +%d)" = "01" ] && [ "$(date -u +%H)" = "12" ]; then
