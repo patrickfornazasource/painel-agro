@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url }}
     steps:
       - uses: actions/checkout@v6
 
@@ -52,7 +52,18 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
+      # O serviço de artefatos do GitHub às vezes leva alguns segundos para listar o artefato recém-enviado
+      # ("No artifacts named github-pages"). Espera um pouco e, se falhar, tenta de novo.
+      - name: Aguardar artefato
+        run: sleep 15
       - id: deploy
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+      - name: Aguardar antes da 2ª tentativa
+        if: steps.deploy.outcome == 'failure'
+        run: sleep 45
+      - id: deploy2
+        if: steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v5
 
   # O GitHub desliga agendamentos de repositórios sem commits há 60 dias.
