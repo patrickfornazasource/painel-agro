@@ -17,9 +17,10 @@ coletor/coletar.mjs   busca as fontes e gera o data.json
 | 2 | Nuvens sobre o Paraná (satélite animado) + cidades | 45 s |
 | 3 | Tempo hoje: agora, alertas, próximas 24 h, janela de pulverização | 45 s |
 | 4 | Soja: Paranaguá, Paraná, Maringá, Chicago, B3 | 45 s |
-| 5 | Dólar + soja e milho de Chicago convertidos em reais | 45 s |
-| 6 | Insumos: diesel S10, ureia, DAP, KCl | 45 s |
-| 7 | Notícias do agro | 45 s |
+| 5 | Milho: Campinas (CEPEA), Maringá, B3, Chicago e Chicago em reais | 45 s |
+| 6 | Dólar + soja e milho de Chicago convertidos em reais | 45 s |
+| 7 | Insumos: diesel S10, ureia, DAP, KCl | 45 s |
+| 8 | Notícias do agro | 45 s |
 
 A ordem é a das `<section class="slide">` no `index.html`: para mudar, basta mover o bloco inteiro.
 O tempo de cada slide fica no atributo `data-seg="…"` da `<section>` correspondente. O padrão é `segundosPorSlide` no topo do script.

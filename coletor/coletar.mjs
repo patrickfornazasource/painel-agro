@@ -189,24 +189,40 @@ async function cbot(simbolo, extra) {
   };
 }
 
-// B3 (soja FOB Santos, US$/saca) via página pública do Notícias Agrícolas.
-async function b3Soja() {
-  const html = await baixar('https://www.noticiasagricolas.com.br/cotacoes/soja/soja-b3-pregao-regular');
-  const tabela = (html.match(/<table[\s\S]*?<\/table>/i) || [])[0];
-  if (!tabela) throw new Error('B3: tabela não encontrada');
-  const linha = linhasTabela(tabela).find((l) => /\d{4}/.test(l[0]) && numBR(l[1]) != null);
-  const data = dataBR((textoPuro(html).match(/Fechamento:\s*(\d{2}\/\d{2}\/\d{4})/) || [])[1]);
-  return {
-    nome: 'Soja B3',
-    contrato: linha[0],
-    valor: numBR(linha[1]),
-    unidade: 'US$/sc',
-    data,
-    var: { pct: numBR(linha[2]), periodo: 'dia' },
-    freq: 'diario',
-    fonte: 'B3 via Notícias Agrícolas',
-    hist: [[data, numBR(linha[1])]],
-  };
+// B3 via página pública do Notícias Agrícolas: soja (FOB Santos, US$/saca) e milho (Campinas, R$/saca).
+// Cada produto tem uma lista de endereços: o primeiro que responder com tabela é usado.
+const PAGINAS_B3 = {
+  soja: { nome: 'Soja B3', unidade: 'US$/sc', urls: ['soja/soja-b3-pregao-regular'] },
+  milho: { nome: 'Milho B3', unidade: 'R$/sc', urls: ['milho/milho-b3-prego-regular', 'milho/milho-b3-pregao-regular'] },
+};
+
+async function b3(produto) {
+  const cfg = PAGINAS_B3[produto];
+  let ultimoErro;
+  for (const caminho of cfg.urls) {
+    try {
+      const html = await baixar(`https://www.noticiasagricolas.com.br/cotacoes/${caminho}`);
+      const tabela = (html.match(/<table[\s\S]*?<\/table>/i) || [])[0];
+      if (!tabela) throw new Error(`${cfg.nome}: tabela não encontrada`);
+      const linha = linhasTabela(tabela).find((l) => /\d{4}/.test(l[0]) && numBR(l[1]) != null);
+      if (!linha) throw new Error(`${cfg.nome}: nenhum contrato na tabela`);
+      const data = dataBR((textoPuro(html).match(/Fechamento:\s*(\d{2}\/\d{2}\/\d{4})/) || [])[1]);
+      return {
+        nome: cfg.nome,
+        contrato: linha[0],
+        valor: numBR(linha[1]),
+        unidade: cfg.unidade,
+        data,
+        var: { pct: numBR(linha[2]), periodo: 'dia' },
+        freq: 'diario',
+        fonte: 'B3 via Notícias Agrícolas',
+        hist: [[data, numBR(linha[1])]],
+      };
+    } catch (e) {
+      ultimoErro = e;
+    }
+  }
+  throw ultimoErro;
 }
 
 // SEAB/DERAL — SIMA: cotação diária de compra pelos atacadistas, por núcleo regional (planilha .xlsx).
@@ -436,7 +452,8 @@ async function main() {
     [['soja_cbot'], async () => ({ soja_cbot: await cbot('ZS=F', { nome: 'Soja Chicago', unidade: 'US$/bu' }) })],
     [['milho_cbot'], async () => ({ milho_cbot: await cbot('ZC=F', { nome: 'Milho Chicago', unidade: 'US$/bu' }) })],
     [['trigo_cbot'], async () => ({ trigo_cbot: await cbot('ZW=F', { nome: 'Trigo Chicago', unidade: 'US$/bu' }) })],
-    [['soja_b3'], async () => ({ soja_b3: await b3Soja() })],
+    [['soja_b3'], async () => ({ soja_b3: await b3('soja') })],
+    [['milho_b3'], async () => ({ milho_b3: await b3('milho') })],
     [['usd'], async () => ({ usd: await dolar() })],
     [['maringa_soja', 'maringa_milho', 'maringa_trigo'], async () => {
       // Na primeira execução (histórico curto) busca mais dias para o gráfico já nascer preenchido.
