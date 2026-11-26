@@ -85,6 +85,8 @@
 
   #s-soja { grid-template-columns: 1.55fr 1fr 1fr; grid-template-rows: 1fr 1fr; }
   #s-soja .grande { grid-row: span 2; }
+  #s-milho { grid-template-columns: 1.55fr 1fr 1fr; grid-template-rows: 1fr 1fr; }
+  #s-milho .grande { grid-row: span 2; }
   #s-dolar { grid-template-columns: 1.3fr 1fr; grid-template-rows: repeat(3, 1fr); }
   #s-dolar .grande { grid-row: span 3; }
   #s-insumos { grid-template-columns: repeat(4, 1fr); }
@@ -407,7 +409,48 @@
       </div>
     </section>
 
-    <!-- 5. DÓLAR -->
+    <!-- 5. MILHO -->
+    <section class="slide" id="s-milho" data-nome="Milho" data-seg="45">
+      <div class="card grande" data-item="milho_cepea">
+        <div class="cab"><svg viewBox="0 0 24 24" data-icone="milho"></svg><h2>Milho · Campinas</h2><span class="selo"></span></div>
+        <div class="rot">Indicador CEPEA/ESALQ · saca de 60 kg</div>
+        <div class="valor num">—</div>
+        <div class="var" data-mes="1"></div>
+        <svg class="spark" width="730" height="300" viewBox="0 0 730 300" data-n="30"></svg>
+        <div class="spark-info num"></div>
+        <div class="fonte"></div>
+      </div>
+      <div class="card peq" data-item="maringa_milho">
+        <div class="cab"><h2>Maringá · Paiçandu</h2><span class="selo"></span></div>
+        <div class="rot">Compra pelos atacadistas · R$/saca</div>
+        <div class="valor num">—</div><div class="var"></div>
+        <svg class="spark" width="440" height="90" viewBox="0 0 440 90" data-n="30"></svg>
+        <div class="fonte"></div>
+      </div>
+      <div class="card peq" data-item="milho_b3">
+        <div class="cab"><h2>B3 · milho</h2><span class="selo"></span></div>
+        <div class="rot">Contrato mais próximo · R$/saca</div>
+        <div class="valor num">—</div><div class="var"></div>
+        <div class="sub num"></div>
+        <div class="fonte"></div>
+      </div>
+      <div class="card peq" data-item="milho_cbot">
+        <div class="cab"><h2>CBOT</h2><span class="selo"></span></div>
+        <div class="rot">Milho em Chicago · US$/bushel</div>
+        <div class="valor num">—</div><div class="var"></div>
+        <div class="sub num"></div>
+        <svg class="spark" width="440" height="70" viewBox="0 0 440 70" data-n="30"></svg>
+        <div class="fonte"></div>
+      </div>
+      <div class="card peq" data-item="milho_cbot" data-conv="milho">
+        <div class="cab"><h2>Chicago em reais</h2><span class="selo"></span></div>
+        <div class="valor num">—</div>
+        <div class="sub num"></div>
+        <div class="fonte"></div>
+      </div>
+    </section>
+
+    <!-- 6. DÓLAR -->
     <section class="slide" id="s-dolar" data-nome="Dólar" data-seg="45">
       <div class="card grande" data-item="usd">
         <div class="cab"><svg viewBox="0 0 24 24" data-icone="dolar"></svg><h2>Dólar comercial</h2><span class="selo"></span></div>
@@ -438,7 +481,7 @@
       </div>
     </section>
 
-    <!-- 6. INSUMOS -->
+    <!-- 7. INSUMOS -->
     <section class="slide" id="s-insumos" data-nome="Insumos" data-seg="45">
       <div class="card peq" data-item="diesel_pr">
         <div class="cab"><svg viewBox="0 0 24 24" data-icone="diesel"></svg><h2>Diesel S10</h2><span class="selo"></span></div>
@@ -478,7 +521,7 @@
       </div>
     </section>
 
-    <!-- 7. NOTÍCIAS -->
+    <!-- 8. NOTÍCIAS -->
     <section class="slide" id="s-noticias" data-nome="Notícias" data-seg="45">
       <div class="card">
         <div class="cab"><svg viewBox="0 0 24 24" data-icone="jornal"></svg><h2>Notícias do agro</h2><span class="selo" id="noticias-selo">g1 Agro · Canal Rural</span></div>
@@ -674,6 +717,7 @@
       var g = id.split('_')[0];
       return c ? '≈ ' + rs(it.valor * BU_POR_SACA[g] * c) + '/sc em reais' : '';
     }
+    if (id === 'milho_b3') return it.contrato ? it.contrato.toLowerCase() : '';
     if (id === 'soja_b3') return (it.contrato ? it.contrato.toLowerCase() + ' · ' : '') + (c ? '≈ ' + rs(it.valor * c) + '/sc' : '');
     if (id === 'trigo_cepea') return '≈ ' + rs(it.valor * 0.06) + ' por saca';
     if (/^(ureia|dap|kcl)$/.test(id)) return c ? '≈ ' + rs(it.valor * c, 0) + '/t no câmbio de hoje' : '';
